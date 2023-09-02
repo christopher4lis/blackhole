@@ -1,0 +1,3 @@
+ ✔ gather all points that overlap into each organism (all red points) @done (23-09-02 12:59)
+ ☐ Find yellow point that's on the same y coordinate (or one or two pixels above) as overlapping red point
+ ☐ move red point's x and y values to conform to the found yellow point
