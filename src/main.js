@@ -538,7 +538,7 @@ function animate() {
     c.lineTo(dragPoints[3].x, dragPoints[3].y)
     c.lineWidth = 5
     c.closePath()
-    // c.strokeStyle = 'red'
+    c.fillStyle = 'red'
     // c.stroke()
     c.fill()
 
