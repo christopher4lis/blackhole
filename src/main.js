@@ -11,7 +11,7 @@ canvas.height = 576
 const PLAYER_WIDTH = 45
 const PLAYER_HEIGHT = 45
 const SOLDIER_WIDTH = 50
-const SOLDIER_HEIGHT = 50
+const SOLDIER_HEIGHT = 60
 const GRAVITY = 0.05
 const GROUND_FRICTION = 0.98
 const SHRINK_DISTANCE = 20
@@ -65,10 +65,11 @@ class Crosshair {
 
 class Player {
   constructor({ position = { x: 0, y: 0 }, velocity = { x: 0, y: 0 } }) {
-    this.position = position
-    this.velocity = velocity
     this.width = PLAYER_WIDTH
     this.height = PLAYER_HEIGHT
+
+    this.position = { x: position.x, y: position.y }
+    this.velocity = velocity
     this.hearts = [
       new Heart({
         position: {
@@ -116,71 +117,83 @@ class Player {
 
   draw() {
     if (this.imageLoaded) {
-      c.save()
-      if (blackHole.position.x < this.position.x) {
-        c.scale(-1, 1)
-        c.drawImage(
-          this.image,
-          this.cropbox.x * this.currentFrame,
-          this.cropbox.y,
-          15,
-          18,
-          -this.position.x - this.width / 2,
-          this.position.y,
-          15 * this.scale,
-          18 * this.scale,
-        )
-      } else {
-        c.drawImage(
-          this.image,
-          this.cropbox.x * this.currentFrame,
-          this.cropbox.y,
-          15,
-          18,
-          this.position.x - this.width / 2,
-          this.position.y,
-          15 * this.scale,
-          18 * this.scale,
-        )
-      }
-
-      c.restore()
-
-      const ANGLE_FROM_BLACKHOLE = Math.atan2(
-        blackHole.position.y - this.position.y + 14,
-        blackHole.position.x - this.position.x - 7,
-      )
-      c.drawImage(
-        this.image,
-        64,
-        14,
-        5,
-        4,
-        this.position.x - 7 + Math.cos(ANGLE_FROM_BLACKHOLE) * 20,
-        this.position.y + 14 + Math.sin(ANGLE_FROM_BLACKHOLE) * 20,
-        5 * this.scale,
-        4 * this.scale,
-      )
-
-      c.save()
-      c.drawImage(
-        this.image,
-        69,
-        0,
-        8,
-        18,
-        this.position.x - 10 + Math.cos(ANGLE_FROM_BLACKHOLE) * 20,
-        this.position.y - 16 + Math.sin(ANGLE_FROM_BLACKHOLE) * 20,
-        8 * this.scale * 0.8,
-        18 * this.scale * 0.8,
-      )
-      c.restore()
+      this.drawSprite()
+      this.drawWand()
     }
   }
 
   update() {
     this.draw()
     this.animateSprite()
+  }
+
+  drawSprite() {
+    c.fillStyle = 'blue'
+    c.fillRect(this.position.x, this.position.y, this.width, this.height)
+
+    c.save()
+    if (blackHole.position.x < this.position.x) {
+      c.scale(-1, 1)
+      c.drawImage(
+        this.image,
+        this.cropbox.x * this.currentFrame,
+        this.cropbox.y,
+        15,
+        18,
+        -this.position.x - this.width,
+        this.position.y,
+        15 * this.scale,
+        18 * this.scale,
+      )
+    } else {
+      c.drawImage(
+        this.image,
+        this.cropbox.x * this.currentFrame,
+        this.cropbox.y,
+        15,
+        18,
+        this.position.x,
+        this.position.y,
+        15 * this.scale,
+        18 * this.scale,
+      )
+    }
+    c.restore()
+  }
+
+  drawWand() {
+    const ANGLE_FROM_BLACKHOLE = Math.atan2(
+      blackHole.position.y - this.position.y + 14,
+      blackHole.position.x - this.position.x - 7,
+    )
+
+    // hand
+    c.drawImage(
+      this.image,
+      64,
+      14,
+      5,
+      4,
+      this.position.x + 15 + Math.cos(ANGLE_FROM_BLACKHOLE) * 22,
+      this.position.y + 14 + Math.sin(ANGLE_FROM_BLACKHOLE) * 22,
+      5 * this.scale,
+      4 * this.scale,
+    )
+
+    // wand
+    c.save()
+    c.drawImage(
+      this.image,
+      69,
+      0,
+      8,
+      18,
+      this.position.x + 12 + Math.cos(ANGLE_FROM_BLACKHOLE) * 22,
+      this.position.y - 16 + Math.sin(ANGLE_FROM_BLACKHOLE) * 29,
+      8 * this.scale * 0.8,
+      18 * this.scale * 0.8,
+    )
+    c.restore()
   }
 
   animateSprite() {
@@ -206,25 +219,66 @@ class Soldier {
     this.msPassed = 0
     this.ATTACK_RATE = 2000
     this.shrink = false
+
+    this.imageLoaded = false
+    this.image = new Image()
+    this.image.onload = () => {
+      this.imageLoaded = true
+    }
+    this.image.src = spritesheet
+    this.cropbox = {
+      x: 20,
+      y: 19,
+      width: 20,
+      height: 24,
+    }
+    this.frames = 0
+    this.maxFrames = 8
+    this.frameDelay = 12
+    this.currentFrame = 0
+    this.scale = 2.5
   }
 
   draw() {
-    c.save()
     c.fillStyle = 'blue'
     c.fillRect(this.position.x, this.position.y, this.width, this.height)
-    c.restore()
+
+    c.drawImage(
+      this.image,
+      this.cropbox.x * this.currentFrame,
+      this.cropbox.y,
+      20,
+      24,
+      this.position.x,
+      this.position.y,
+      20 * this.scale,
+      24 * this.scale,
+    )
   }
 
   update({ player, delta, blackHole }) {
     this.draw()
+    this.animateSprite()
+
     if (this.shrink) {
       this.width -= 4
       this.height -= 4
     }
 
+    const isTouchingPlayer = this.shouldAttackPlayer()
+    if (isTouchingPlayer) return
+
+    this.position.x += this.velocity.x
+
+    this.applyGravity()
+    this.magnetize()
+  }
+
+  shouldAttackPlayer() {
     const isTouchingPlayer =
       this.position.x + this.width >= player.position.x &&
       this.position.x <= player.position.x + player.width
+
     if (isTouchingPlayer) {
       this.msPassed += delta
 
@@ -233,10 +287,11 @@ class Soldier {
         this.msPassed = 0
       }
 
-      return
+      return isTouchingPlayer
     }
+  }
 
-    this.position.x += this.velocity.x
+  applyGravity() {
     this.velocity.y += GRAVITY
 
     if (this.position.y + this.height + this.velocity.y >= canvas.height) {
@@ -244,8 +299,17 @@ class Soldier {
     } else {
       this.position.y += this.velocity.y
     }
+  }
 
-    this.magnetize()
+  animateSprite() {
+    this.frames++
+
+    if (this.frames % this.frameDelay === 0) this.currentFrame++
+
+    if (this.currentFrame >= this.maxFrames) {
+      this.frames = 0
+      this.currentFrame = 0
+    }
   }
 
   magnetize() {
@@ -351,7 +415,7 @@ class BlackHole {
 
 const player = new Player({
   position: {
-    x: canvas.width / 2,
+    x: canvas.width / 2 - PLAYER_WIDTH / 2,
     y: canvas.height - PLAYER_HEIGHT,
   },
 })
@@ -363,7 +427,7 @@ const soldiers = [
       y: canvas.height - SOLDIER_HEIGHT,
     },
     velocity: {
-      x: 0.1,
+      x: 0.5,
       y: 0,
     },
   }),
