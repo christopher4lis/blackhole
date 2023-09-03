@@ -10,8 +10,8 @@ canvas.height = 576
 
 const PLAYER_WIDTH = 45
 const PLAYER_HEIGHT = 45
-const SOLDIER_WIDTH = 50
-const SOLDIER_HEIGHT = 60
+const SOLDIER_WIDTH = 85
+const SOLDIER_HEIGHT = 70
 const GRAVITY = 0.05
 const GROUND_FRICTION = 0.98
 const SHRINK_DISTANCE = 20
@@ -79,14 +79,14 @@ class Player {
       }),
       new Heart({
         position: {
-          x: 25,
+          x: 45,
           y: 10,
         },
       }),
 
       new Heart({
         position: {
-          x: 40,
+          x: 80,
           y: 10,
         },
       }),
@@ -128,8 +128,8 @@ class Player {
   }
 
   drawSprite() {
-    c.fillStyle = 'blue'
-    c.fillRect(this.position.x, this.position.y, this.width, this.height)
+    // c.fillStyle = 'blue'
+    // c.fillRect(this.position.x, this.position.y, this.width, this.height)
 
     c.save()
     if (blackHole.position.x < this.position.x) {
@@ -237,22 +237,24 @@ class Soldier {
     this.frameDelay = 12
     this.currentFrame = 0
     this.scale = 2.5
+    this.state = 'walk'
   }
 
   draw() {
-    c.fillStyle = 'blue'
-    c.fillRect(this.position.x, this.position.y, this.width, this.height)
+    // c.fillStyle = 'blue'
+    // c.fillRect(this.position.x, this.position.y, this.width, this.height)
+    const offset = this.state === 'walk' ? 12 : 0
 
     c.drawImage(
       this.image,
       this.cropbox.x * this.currentFrame,
       this.cropbox.y,
-      20,
-      24,
+      this.cropbox.width,
+      this.cropbox.height,
       this.position.x,
-      this.position.y,
-      20 * this.scale,
-      24 * this.scale,
+      this.position.y + offset,
+      this.cropbox.width * this.scale,
+      this.cropbox.height * this.scale,
     )
   }
 
@@ -265,16 +267,17 @@ class Soldier {
       this.height -= 4
     }
 
-    const isTouchingPlayer = this.shouldAttackPlayer()
+    this.applyGravity()
+    this.magnetize()
+
+    const isTouchingPlayer = this.shouldAttackPlayer(delta)
+    if (isTouchingPlayer && this.state === 'walk') this.setAttackState()
     if (isTouchingPlayer) return
 
     this.position.x += this.velocity.x
-
-    this.applyGravity()
-    this.magnetize()
   }
 
-  shouldAttackPlayer() {
+  shouldAttackPlayer(delta) {
     const isTouchingPlayer =
       this.position.x + this.width >= player.position.x &&
       this.position.x <= player.position.x + player.width
@@ -283,7 +286,14 @@ class Soldier {
       this.msPassed += delta
 
       if (this.msPassed > this.ATTACK_RATE) {
-        player.hearts.pop()
+        for (let i = player.hearts.length - 1; i >= 0; i--) {
+          const heart = player.hearts[i]
+
+          if (heart.state !== 'empty') {
+            player.hearts[i].loseHeart()
+            break
+          }
+        }
         this.msPassed = 0
       }
 
@@ -312,6 +322,20 @@ class Soldier {
     }
   }
 
+  setAttackState() {
+    this.state = 'attack'
+    this.cropbox = {
+      x: 38,
+      y: 44,
+      width: 38,
+      height: 28,
+    }
+    this.frames = 0
+    this.maxFrames = 5
+    this.frameDelay = 22
+    this.currentFrame = 0
+  }
+
   magnetize() {
     // magnetize to black hole
     const MIN_DISTANCE = 200 // set the minimum distance for attraction
@@ -336,15 +360,47 @@ class Heart {
   constructor({ position = { x: 0, y: 0 }, velocity = { x: 0, y: 0 } }) {
     this.position = position
     this.velocity = velocity
+
+    this.imageLoaded = false
+    this.image = new Image()
+    this.image.onload = () => {
+      this.imageLoaded = true
+    }
+    this.image.src = spritesheet
+
+    // lost heart x is at 77px, current heart is at 95px
+    this.cropbox = {
+      x: 95,
+      y: 0,
+      width: 18,
+      height: 13,
+    }
+    this.currentFrame = 0
+    this.scale = 2
+    this.state = 'full'
   }
 
   draw() {
-    c.fillStyle = 'red'
-    c.fillRect(this.position.x, this.position.y, 10, 10)
+    c.drawImage(
+      this.image,
+      this.cropbox.x,
+      this.cropbox.y,
+      this.cropbox.width,
+      this.cropbox.height,
+      this.position.x,
+      this.position.y,
+      this.cropbox.width * this.scale,
+      this.cropbox.height * this.scale,
+    )
   }
 
   update() {
     this.draw()
+  }
+
+  loseHeart() {
+    this.state = 'empty'
+    this.cropbox.x = 78
   }
 }
 
