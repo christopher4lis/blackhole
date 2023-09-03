@@ -1,3 +1,20 @@
- ✔ gather all points that overlap into each organism (all red points) @done (23-09-02 12:59)
- ☐ Find yellow point that's on the same y coordinate (or one or two pixels above) as overlapping red point
- ☐ move red point's x and y values to conform to the found yellow point
+ ✔ On click, create two "Points" @done (23-09-02 21:04)
+ ✔ On move, drag one point @done (23-09-02 21:04)
+ ✔ Always render line associated with both points @done (23-09-02 21:04)
+ ✔ Get drag distance @done (23-09-02 21:05)
+ ✔ Now get angle @done (23-09-02 21:07)
+ ✔ Launch a blackHole from player's location based on these values @done (23-09-02 22:59)
+ ✔ Fancy arrow click drag art @done (23-09-02 23:15)
+ ☐ Arrow around black hole on click drag
+ ✔ Wizard sprite @done (23-09-03 00:13)
+ ✔ Detach hand from wizard sprite @done (23-09-03 01:31)
+ ✔ Fix line on wizard sprite (if still exists) @done (23-09-03 01:31)
+ ✔ Add hand into spritesheet @done (23-09-03 01:31)
+ ☐ Rotate wand with hand no matter where it is
+ ☐ Background sprite
+ ☐ Floor sprite
+ ☐ Rock pedestal sprite
+ ☐ Soldier sprite
+ ☐ Black hole art
+   ☐ Fade spinners
+   ☐ Electric black hole

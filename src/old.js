@@ -58,6 +58,24 @@ class Bacteria {
     c.closePath()
     c.strokeStyle = this.color
     c.stroke()
+
+    c.shadowBlur = 0
+    c.fillStyle = '#181622'
+    c.fill()
+
+    // c.strokeRect(
+    //   this.position.x + 10 + this.wiggle.x * 0.5,
+    //   this.position.y - this.radius + 10 + this.wiggle.y * 0.5,
+    //   10,
+    //   35,
+    // )
+    // c.strokeRect(
+    //   this.position.x - 10 + this.wiggle.x * 0.5,
+    //   this.position.y - this.radius + 14 + this.wiggle.y * 0.5,
+    //   10,
+    //   35,
+    // )
+
     c.restore()
   }
 
@@ -87,7 +105,7 @@ class Bacteria {
 
   getPoints() {
     const points = []
-    const count = 100
+    const count = 50
     const radianIncrement = (Math.PI * 2) / count
 
     for (let i = 0; i < count; i++) {
@@ -113,48 +131,65 @@ class Bacteria {
 const player = new Bacteria({
   position: { x: -60 + canvas.width / 2, y: canvas.height / 2 },
   radius: 50,
-  color: 'red',
+  color: 'yellow',
   move: true,
 })
 
 const bacterias = [
   new Bacteria({
     position: { x: canvas.width / 2 + 60, y: canvas.height / 2 },
-    radius: 50,
+    radius: 10,
     color: 'yellow',
-    maxRadius: 50,
+    maxRadius: 10,
     wiggleSpeed: (Math.random() - 0.5) * 10,
-    move: false,
+    move: true,
   }),
 ]
 
+let time = 0
 function animate() {
+  time += 0.05
   requestAnimationFrame(animate)
   c.clearRect(0, 0, canvas.width, canvas.height)
-  player.update(bacterias[0])
+
+  // background elements
+  for (let i = 0; i < canvas.width; i += 40) {
+    for (let j = 0; j < canvas.width; j += 40) {
+      c.shadowBlur = 0
+      c.fillStyle = 'rgba(255,255,0,0.2)'
+      c.fillRect(i, j, 10, 10)
+    }
+  }
 
   bacterias.forEach((bacteria) => {
     bacteria.update()
   })
+
+  player.update(bacterias[0])
 
   // Compute the overlapping points on spawn
   if (bacterias.length === 0) return
   const playerPoints = player.getPoints()
   const bacteriaPoints = bacterias[0].getPoints()
 
-  playerPoints.forEach((p1, i) => {
-    bacteriaPoints.forEach((p2) => {
+  for (let i = 0; i < playerPoints.length; i++) {
+    const p1 = playerPoints[i]
+    for (let j = 0; j < bacteriaPoints.length; j++) {
+      const p2 = bacteriaPoints[j]
+
       const dx = p2.x - p1.x
       const dy = p2.y - p1.y
       const distance = Math.sqrt(dx * dx + dy * dy)
-      const closeEnough = distance < 30 // Adjust this value as needed
+      const closeEnough = distance < 10 // Adjust this value as needed
 
       if (closeEnough) {
-        player.points[i].x = p2.x
-        player.points[i].y = p2.y
+        player.points[i].x = p2.x - 2
+        player.points[i].y = p2.y - 1
+
+        break
       }
-    })
-  })
+    }
+  }
 }
 
 animate()
