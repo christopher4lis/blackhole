@@ -370,7 +370,7 @@ class Heart {
 
     // lost heart x is at 77px, current heart is at 95px
     this.cropbox = {
-      x: 95,
+      x: 97,
       y: 0,
       width: 18,
       height: 13,
@@ -400,7 +400,7 @@ class Heart {
 
   loseHeart() {
     this.state = 'empty'
-    this.cropbox.x = 78
+    this.cropbox.x = 79
   }
 }
 
