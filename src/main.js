@@ -16,6 +16,44 @@ const GRAVITY = 0.05
 const GROUND_FRICTION = 0.98
 const SHRINK_DISTANCE = 20
 
+class Sprite {
+  constructor({ position = { x: 0, y: 0 }, imageSrc, cropbox, width, height }) {
+    this.width = width
+    this.height = height
+
+    this.position = position
+
+    this.imageLoaded = false
+    this.image = new Image()
+    this.image.onload = () => {
+      this.imageLoaded = true
+    }
+    this.image.src = imageSrc
+    this.cropbox = cropbox
+    this.scale = 2
+  }
+
+  draw() {
+    c.drawImage(
+      this.image,
+      this.cropbox.x,
+      this.cropbox.y,
+      this.width - 2,
+      this.height,
+      this.position.x,
+      this.position.y,
+      this.width * this.scale,
+      this.height * this.scale,
+    )
+    // c.fillStyle = 'red'
+    // c.fillRect(this.position.x, this.position.y, this.width * this.scale, this.height * this.)
+  }
+
+  update() {
+    this.draw()
+  }
+}
+
 class Crosshair {
   constructor({ position = { x: 0, y: 0 }, velocity = { x: 0, y: 0 } }) {
     this.position = position
@@ -125,6 +163,7 @@ class Player {
   update() {
     this.draw()
     this.animateSprite()
+    this.position.x += this.velocity.x
   }
 
   drawSprite() {
@@ -211,7 +250,11 @@ class Player {
 }
 
 class Soldier {
-  constructor({ position = { x: 0, y: 0 }, velocity = { x: 0, y: 0 } }) {
+  constructor({
+    position = { x: 0, y: 0 },
+    velocity = { x: 0, y: 0 },
+    mass = 10,
+  }) {
     this.position = position
     this.velocity = velocity
     this.width = SOLDIER_WIDTH
@@ -238,12 +281,22 @@ class Soldier {
     this.currentFrame = 0
     this.scale = 2.5
     this.state = 'walk'
+    this.totalScale = 1
+    this.mass = mass
   }
 
   draw() {
-    // c.fillStyle = 'blue'
-    // c.fillRect(this.position.x, this.position.y, this.width, this.height)
-    const offset = this.state === 'walk' ? 12 : 0
+    const offsetX = (this.cropbox.width * this.scale) / 2
+    const offsetY = (this.cropbox.height * this.scale) / 2
+
+    c.save() // Save current state
+    c.translate(this.position.x + offsetX, this.position.y + offsetY) // Translate to the center of the sprite
+
+    if (this.shrink) {
+      // Assuming you want to shrink it by 10% as an example
+      this.totalScale -= 0.1
+      c.scale(this.totalScale, this.totalScale)
+    }
 
     c.drawImage(
       this.image,
@@ -251,21 +304,20 @@ class Soldier {
       this.cropbox.y,
       this.cropbox.width,
       this.cropbox.height,
-      this.position.x,
-      this.position.y + offset,
+      -offsetX, // Subtract the offset to realign sprite to new origin
+      -offsetY, // Subtract the offset to realign sprite to new origin
       this.cropbox.width * this.scale,
       this.cropbox.height * this.scale,
     )
+    c.restore() // Restore original state
+
+    c.fillStyle = 'rgba(255,0,0,0.2)'
+    c.fillRect(this.position.x, this.position.y, this.width, this.height)
   }
 
   update({ player, delta, blackHole }) {
     this.draw()
     this.animateSprite()
-
-    if (this.shrink) {
-      this.width -= 4
-      this.height -= 4
-    }
 
     this.applyGravity()
     this.magnetize()
@@ -304,7 +356,7 @@ class Soldier {
   applyGravity() {
     this.velocity.y += GRAVITY
 
-    if (this.position.y + this.height + this.velocity.y >= canvas.height) {
+    if (this.position.y + this.height + this.velocity.y >= canvas.height - 32) {
       this.velocity.y = 0
     } else {
       this.position.y += this.velocity.y
@@ -339,7 +391,8 @@ class Soldier {
   magnetize() {
     // magnetize to black hole
     const MIN_DISTANCE = 200 // set the minimum distance for attraction
-    const directionX = blackHole.position.x - (this.position.x + this.width / 2)
+    const directionX =
+      blackHole.position.x - (this.position.x + this.width / 2 - 15)
     const directionY =
       blackHole.position.y - (this.position.y + this.height / 2)
     const distance = Math.sqrt(
@@ -414,6 +467,13 @@ class BlackHole {
     this.velocity = velocity
     this.radius = radius
     this.newRadius = radius
+
+    this.pointer = {
+      x: this.position.x,
+      y: this.position.y,
+      radius: 5,
+      angle: 0,
+    }
   }
 
   draw() {
@@ -431,10 +491,10 @@ class BlackHole {
     if (this.enableGravity) this.velocity.y += GRAVITY
     this.position.x += this.velocity.x
 
-    if (this.position.y + this.radius + this.velocity.y >= canvas.height) {
+    if (this.position.y + this.radius + this.velocity.y >= canvas.height - 32) {
       this.velocity.y = 0
       this.velocity.x *= GROUND_FRICTION
-      this.position.y = canvas.height - this.radius
+      this.position.y = canvas.height - this.radius - 32
     } else {
       this.position.y += this.velocity.y
     }
@@ -460,6 +520,24 @@ class BlackHole {
     }
 
     this.grow()
+    this.drawPointer()
+  }
+
+  drawPointer() {
+    this.pointer.x = this.position.x
+    this.pointer.y = this.position.y
+    c.beginPath()
+    c.arc(
+      this.pointer.x + -Math.cos(this.pointer.angle) * (this.radius + 10),
+      this.pointer.y + -Math.sin(this.pointer.angle) * (this.radius + 10),
+      this.pointer.radius,
+      0,
+      Math.PI * 2,
+      false,
+    )
+    c.fillStyle = 'red'
+    c.fill()
+    c.closePath()
   }
 
   grow() {
@@ -472,7 +550,7 @@ class BlackHole {
 const player = new Player({
   position: {
     x: canvas.width / 2 - PLAYER_WIDTH / 2,
-    y: canvas.height - PLAYER_HEIGHT,
+    y: canvas.height - PLAYER_HEIGHT - 37,
   },
 })
 
@@ -480,7 +558,7 @@ const soldiers = [
   new Soldier({
     position: {
       x: SOLDIER_WIDTH + 100,
-      y: canvas.height - SOLDIER_HEIGHT,
+      y: canvas.height - SOLDIER_HEIGHT - 32,
     },
     velocity: {
       x: 0.5,
@@ -491,6 +569,14 @@ const soldiers = [
 
 let prevTimestamp = Date.now()
 let dragPoints = []
+const keys = {
+  d: {
+    pressed: false,
+  },
+  a: {
+    pressed: false,
+  },
+}
 const mouse = {
   down: true,
   radius: 10,
@@ -498,11 +584,55 @@ const mouse = {
 
 const blackHole = new BlackHole({
   position: {
-    x: 300,
-    y: 100,
+    x: 400,
+    y: 500,
   },
   radius: 30,
 })
+
+const groundTiles = []
+
+for (let i = 0; i < canvas.width; i += 32) {
+  groundTiles.push(
+    new Sprite({
+      position: {
+        x: i,
+        y: canvas.height - 31,
+      },
+      width: 16,
+      height: 16,
+      imageSrc: spritesheet,
+      cropbox: {
+        x: 117,
+        y: 0,
+        width: 16,
+        height: 16,
+      },
+    }),
+  )
+}
+
+const levels = {
+  1: {
+    smallSoldiers: {
+      left: {
+        count: 4,
+      },
+      right: {
+        count: 2,
+      },
+    },
+    largeSoldiers: {
+      left: {
+        count: 0,
+      },
+      right: {
+        count: 1,
+      },
+    },
+  },
+}
+
 function animate() {
   requestAnimationFrame(animate)
 
@@ -513,14 +643,24 @@ function animate() {
   c.clearRect(0, 0, canvas.width, canvas.height)
   c.fillStyle = 'lightblue'
   c.fillRect(0, 0, canvas.width, canvas.height)
+  groundTiles.forEach((tile) => {
+    tile.update()
+  })
+
+  blackHole.update()
   player.update()
   // player.crosshair.update()
+
+  player.velocity.x = 0
+  player.velocity.y = 0
+  if (keys.d.pressed) player.velocity.x = 10
+  else if (keys.a.pressed) player.velocity.x = -10
 
   for (let i = soldiers.length - 1; i >= 0; i--) {
     const soldier = soldiers[i]
 
-    if (soldier.width < 5 || soldier.height < 5) {
-      blackHole.newRadius += soldier.width
+    if (soldier.totalScale <= 0.1) {
+      blackHole.newRadius += soldier.mass
       soldiers.splice(i, 1)
     } else soldier.update({ player, delta, blackHole })
   }
@@ -548,7 +688,6 @@ function animate() {
     c.fillStyle = 'red'
     c.fill()
   }
-  blackHole.update()
 }
 
 animate()
@@ -582,10 +721,7 @@ addEventListener('mousemove', (e) => {
     dragPoints[3].y =
       dragPoints[0].y + Math.sin(LAUNCH_ANGLE + Math.PI / 2) * mouse.radius
 
-    player.crosshair.position.x =
-      player.position.x + player.width / 2 - Math.cos(LAUNCH_ANGLE) * 10
-    player.crosshair.position.y =
-      player.position.y - Math.sin(LAUNCH_ANGLE) * 10
+    blackHole.pointer.angle = LAUNCH_ANGLE
   }
 })
 
@@ -615,10 +751,10 @@ addEventListener('mouseup', (e) => {
 addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'KeyA':
-      player.velocity.x += -1
+      keys.a.pressed = true
       break
     case 'KeyD':
-      player.velocity.x += 1
+      keys.d.pressed = true
       break
     case 'KeyW':
       player.velocity.y += -1
@@ -643,6 +779,23 @@ addEventListener('keydown', (e) => {
       setTimeout(() => {
         player.shrink = false
       }, 500)
+      break
+  }
+})
+
+addEventListener('keyup', (e) => {
+  switch (e.code) {
+    case 'KeyA':
+      keys.a.pressed = false
+      break
+    case 'KeyD':
+      keys.d.pressed = false
+      break
+    case 'KeyW':
+      player.velocity.y += -1
+      break
+    case 'KeyS':
+      player.velocity.y += 1
       break
   }
 })
