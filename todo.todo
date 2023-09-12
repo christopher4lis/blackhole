@@ -1,3 +1,25 @@
+ ✔ Add player / box collisions (need multi sided collision detection) @done (23-09-11 18:37)
+ ✔ Add black hole / box collisions (circle to box collision) @done (23-09-11 18:47)
+ ✔ Stack boxes @done (23-09-11 18:47)
+ ☐ Add orbs to collect
+ ☐ Only allow boxes to be cleaned up if orb is big enough
+ ☐ Add second challenge with pathway and stacked boxes
+ ☐ Add parallax item
+ ☐ Add a third challenge with an enemy
+ ☐ Add fourth challenge
+ ☐ Add fifth and final challenge
+ ☐ Add start screen
+ ☐ Add sound effects
+ ☐ Add music
+
+
+ FINISHING MOVES:
+ ☐ Full screen
+ ☐ Center canvas
+
+
+
+
  ✔ On click, create two "Points" @done (23-09-02 21:04)
  ✔ On move, drag one point @done (23-09-02 21:04)
  ✔ Always render line associated with both points @done (23-09-02 21:04)
@@ -11,7 +33,13 @@
  ✔ Fix line on wizard sprite (if still exists) @done (23-09-03 01:31)
  ✔ Add hand into spritesheet @done (23-09-03 01:31)
  ✔ Soldier sprite @done (23-09-03 14:21)
- ☐ Add ground sprite
+ ✔ Add ground sprite @done (23-09-04 17:13)
+ ✔ Add delta to player movement @done (23-09-04 17:27)
+ ☐ Add smoke trail to player when running
+
+ ☐ add jump
+
+
  ☐ Add flash effect to mage on hit
  ☐ Add screen flash effect on hit
  ☐ Add heart sprites
