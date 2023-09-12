@@ -17,7 +17,7 @@ import {
   GROUND_WIDTH,
 } from './globals.js'
 
-const canvas = document.querySelector('canvas')
+const canvas = document.querySelector('#c')
 const c = canvas.getContext('2d')
 
 canvas.width = 1024
@@ -137,7 +137,7 @@ class Player {
     this.applyGravity(delta)
     this.checkForVerticalCollisions({ boxes })
     this.renderSmokeTrail()
-    this.renderDebugBoxes()
+    // this.renderDebugBoxes()
     if (this.position.x < 0) this.position.x = 0
   }
 
