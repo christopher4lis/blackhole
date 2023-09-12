@@ -1,8 +1,6 @@
 // inspo for particles: https://codepen.io/towc/pen/WrjbMw
-import { noise } from '@chriscourses/perlin-noise'
 import spritesheet from './spritesheet.png'
 import fontSpritesheet from './font.png'
-import { groundData } from './data/groundData.js'
 import { Sprite } from './classes/Sprite.js'
 import { Blackhole } from './classes/Blackhole.js'
 import { Heart } from './classes/Heart.js'
@@ -11,7 +9,13 @@ import { BitmapFont } from './classes/BitmapFont.js'
 import { Soldier } from './classes/Soldier.js'
 import { Orb } from './classes/Orb.js'
 import { boxCollision } from './utils.js'
-import { SOLDIER_WIDTH, SOLDIER_HEIGHT, GRAVITY } from './globals.js'
+import {
+  SOLDIER_WIDTH,
+  SOLDIER_HEIGHT,
+  GRAVITY,
+  GROUND_HEIGHT,
+  GROUND_WIDTH,
+} from './globals.js'
 
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
@@ -20,10 +24,7 @@ canvas.width = 1024
 canvas.height = 576
 
 const FADE_SPEED = 0.003
-const FULL_LEVEL_WIDTH = canvas.width * 5
 const GROUND_FRICTION = 0.98
-const GROUND_HEIGHT = 128
-const GROUND_WIDTH = 96
 const MAP_TILES_PER_ROW = 64
 const PARTICLE_BASE_SIZE = 1
 const PARTICLE_ADDED_SIZE = 1
@@ -39,36 +40,28 @@ const SKY_COLOR = '#181622'
 const POINTER_COLOR = '#993399'
 const DUST_COLOR = '#6abe30'
 
-const groundArray = []
-for (let i = 0; i < groundData.length; i += MAP_TILES_PER_ROW) {
-  groundArray.push(groundData.slice(i, i + MAP_TILES_PER_ROW))
-}
-
 const groundSprites = []
-groundArray.forEach((row, y) => {
-  row.forEach((symbol, x) => {
-    if (symbol === 228) {
-      groundSprites.push(
-        new Sprite({
-          position: {
-            x: x * 16 * 2,
-            y: y * 16 * 2,
-          },
-          width: GROUND_WIDTH,
-          height: GROUND_HEIGHT,
-          imageSrc: spritesheet,
-          cropbox: {
-            x: 48,
-            y: 112,
-            width: 16,
-            height: 16,
-          },
-          scale: 2,
-        }),
-      )
-    }
-  })
-})
+
+for (let i = 0; i < 30; i++) {
+  groundSprites.push(
+    new Sprite({
+      position: {
+        x: i * GROUND_WIDTH,
+        y: canvas.height - GROUND_HEIGHT,
+      },
+      width: GROUND_WIDTH,
+      height: GROUND_HEIGHT,
+      imageSrc: spritesheet,
+      cropbox: {
+        x: 134,
+        y: 0,
+        width: 16,
+        height: 16,
+      },
+      scale: 4,
+    }),
+  )
+}
 
 class Player {
   constructor({ position = { x: 0, y: 0 }, velocity = { x: 0, y: 0 } }) {
@@ -593,7 +586,7 @@ for (let i = 0; i < 300; i++) {
   stars.push(
     new Particle({
       position: {
-        x: Math.random() * FULL_LEVEL_WIDTH,
+        x: Math.random() * (canvas.width * 2),
         y: Math.random() * canvas.height,
       },
       radius: Math.random() * 2,
@@ -870,19 +863,9 @@ addEventListener('keydown', (e) => {
         player.velocity.y = -PLAYER_JUMP_POWER
         player.jumpCount++
       }
-
       break
     case 'KeyS':
       player.velocity.y += 1
-      break
-    case 'Digit1':
-      player.color = 'red'
-      break
-    case 'Digit2':
-      player.color = 'yellow'
-      break
-    case 'Digit3':
-      player.color = 'teal'
       break
 
     case 'Space':

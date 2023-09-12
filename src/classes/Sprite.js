@@ -52,7 +52,7 @@ export class Sprite {
     )
     c.globalAlpha = 1
 
-    this.renderDebugBoxes(c)
+    // this.renderDebugBoxes(c)
   }
 
   renderFadeIn() {
