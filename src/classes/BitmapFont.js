@@ -23,12 +23,38 @@ export class BitmapFont {
     this.FADE_SPEED = 0.02 // Adjust as necessary
     this.fadeState = null // can be "in", "out", or null
     this.fadeAlpha = 1.0
+    this.scrollX = 0
+    this.checkpoints = [
+      {
+        activationDistance: 1300,
+        x: 1300,
+        y: 140,
+        text: 'THE KNIGHTS HAVE MAGIC BARRIERS THAT WILL SHRINK THE VOID',
+        activated: false,
+      },
+      {
+        activationDistance: 2200,
+        x: 2400,
+        y: 300,
+        text: 'BEWARE KNIGHTS LARGER THAN YOUR VOID',
+        activated: false,
+      },
+    ]
   }
 
   init() {
     this.letterSequences.push(this.createText('YOUNG MAGI AWAKEN', 425, 300))
+
+    // this.letterSequences.push(
+    //   this.createText(
+    //     'ENVIOUS KNIGHTS DESIRE NOTHING MORE THAN TO STEAL WHAT IS OURS',
+    //     200,
+    //     300,
+    //   ),
+    // )
+
     this.letterSequences.push(
-      this.createText('WITH YOU LIES THE POWER OF OMNI', 360, 300),
+      this.createText('WITH YOU LIES THE POWER OF VOID', 360, 300),
     )
 
     this.letterSequences.push(
@@ -36,18 +62,18 @@ export class BitmapFont {
     )
 
     this.letterSequences.push(
-      this.createText('CLICK AND DRAG TO MOVE THE OMNI', 360, 300),
+      this.createText('CLICK AND DRAG TO MOVE THE VOID', 360, 300),
     )
 
     this.letterSequences.push(
-      this.createText('USE THE W A S D KEYS TO MOVE', 660, 438),
+      this.createText('USE THE W A S D KEYS TO MOVE', 660, 138),
     )
     this.letterSequences.push(
-      this.createText('COLLECT ORBS TO GROW THE OMNI', 1330, 438),
+      this.createText('COLLECT ORBS TO GROW THE VOID', 1330, 308),
     )
     this.letterSequences.push(
       this.createText(
-        'GROW THE OMNI TO CONSUME SMALLER OBJECTS LIKE BOXES',
+        'GROW THE VOID TO CONSUME SMALLER OBJECTS LIKE BOXES',
         700,
         148,
       ),
@@ -75,7 +101,22 @@ export class BitmapFont {
     }
   }
 
-  createText(text, x, y) {
+  updateScrollPosition(x) {
+    this.scrollX = x
+
+    for (const checkpoint of this.checkpoints) {
+      if (x >= checkpoint.activationDistance && !checkpoint.activated) {
+        checkpoint.activated = true
+        this.showCheckpointText(checkpoint.text, checkpoint.x, checkpoint.y)
+      }
+    }
+  }
+  showCheckpointText(text, x, y) {
+    const checkpointLetters = this.createText(text, x, y, true)
+    this.letters = [...checkpointLetters]
+  }
+
+  createText(text, x, y, isCheckpoint = false) {
     if (!this.isLoaded) {
       console.warn('Bitmap font image not yet loaded.')
       this.onImageLoad = () => {
@@ -117,6 +158,7 @@ export class BitmapFont {
           width: this.charWidth,
           height: this.charHeight,
           delay: currentDelay, // Add delay for staggered animation
+          isCheckpoint,
         })
 
         letters.push(letter)

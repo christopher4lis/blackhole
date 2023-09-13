@@ -1,14 +1,22 @@
  ✔ Add player / box collisions (need multi sided collision detection) @done (23-09-11 18:37)
  ✔ Add black hole / box collisions (circle to box collision) @done (23-09-11 18:47)
  ✔ Stack boxes @done (23-09-11 18:47)
- ☐ Add orbs to collect
- ☐ Only allow boxes to be cleaned up if orb is big enough
- ☐ Add second challenge with pathway and stacked boxes
- ☐ Add parallax item
+ ✔ Add orbs to collect @done (23-09-12 17:33)
+ ✔ Only allow boxes to be cleaned up if orb is big enough @done (23-09-12 17:33)
+ ✔ Add second challenge with pathway and stacked boxes @done (23-09-12 17:33)
+ ✔ Add parallax item @done (23-09-12 17:33)
+ ☐ Place knight in correct position
+ ☐ Add text that activates when scroll position reaches certain point
+   ☐ Magic barriers set by the knights will shrink the omni
+   ☐ Knights can only be defeated with a more powerful omni
+   ☐ We must find a way to grow and pass
+ ☐ Fade to black, restart game functionality
+ ☐ Compress spritesheet (can prob save 2kb)
+
+
  ☐ Add a third challenge with an enemy
  ☐ Add fourth challenge
  ☐ Add fifth and final challenge
- ☐ Add start screen
  ☐ Add sound effects
  ☐ Add music
 

@@ -1,8 +1,21 @@
 export class Letter {
-  constructor({ char, x, y, image, sourceX, sourceY, width, height, delay }) {
+  constructor({
+    char,
+    x,
+    y,
+    image,
+    sourceX,
+    sourceY,
+    width,
+    height,
+    delay,
+    isCheckpoint,
+  }) {
     this.char = char
-    this.x = x
-    this.y = y
+    this.position = {
+      x,
+      y,
+    }
     this.image = image
     this.sourceX = sourceX
     this.sourceY = sourceY
@@ -13,6 +26,8 @@ export class Letter {
     this.offsetY = 20 // Start slightly below its final y-position
     this.delay = delay || 0
     this.framesElapsed = 0 // Add a property to keep track of frames elapsed since the creation of the letter
+    this.shouldMagnetize = true
+    this.isCheckpoint = isCheckpoint
   }
 
   draw(c) {
@@ -23,12 +38,14 @@ export class Letter {
       this.sourceY,
       this.width,
       this.height,
-      this.x,
-      this.y - this.offsetY,
+      this.position.x,
+      this.position.y - this.offsetY,
       this.width,
       this.height,
     )
     c.globalAlpha = 1 // Reset globalAlpha to its default value
+    // c.fillStyle = 'red'
+    // c.fillRect(this.position.x, this.position.y, this.width, this.height)
   }
 
   animate() {

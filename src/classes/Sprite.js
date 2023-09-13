@@ -11,7 +11,9 @@ export class Sprite {
     scale = 1,
     shouldApplyGravity = false,
     alpha = 1,
+    shouldMagnetize = false,
   }) {
+    this.isSprite = true
     this.width = width * scale
     this.height = height * scale
 
@@ -35,6 +37,7 @@ export class Sprite {
     this.alpha = alpha
     this.fadeIn = false
     this.fadeOut = false
+    this.shouldMagnetize = shouldMagnetize
   }
 
   draw(c) {
@@ -73,14 +76,14 @@ export class Sprite {
     c.fillRect(this.position.x, this.position.y, this.width, this.height)
   }
 
-  update({ c, canvas, delta, player, otherSprites }) {
+  update({ c, canvas, delta, player, otherSprites, blackHole }) {
     this.draw(c)
 
     this.renderFadeIn()
     this.renderFadeOut()
 
     if (this.shouldApplyGravity)
-      this.applyGravity({ canvas, delta, otherSprites })
+      this.applyGravity({ canvas, delta, otherSprites, blackHole })
   }
 
   initAnimation(startPosition, endPosition, duration) {
@@ -94,7 +97,17 @@ export class Sprite {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
   }
 
-  applyGravity({ delta, canvas, otherSprites }) {
+  applyGravity({ delta, canvas, otherSprites, blackHole }) {
+    // Check if under black hole's influence
+    const distanceToBlackHole = Math.sqrt(
+      Math.pow(this.position.x + this.width / 2 - blackHole.position.x, 2) +
+        Math.pow(this.position.y + this.height / 2 - blackHole.position.y, 2),
+    )
+
+    const underBlackHoleInfluence = distanceToBlackHole < 100 // You'll need to define this constant or determine it dynamically
+
+    if (underBlackHoleInfluence) return
+
     this.position.y += this.velocity.y * delta
     this.velocity.y += GRAVITY * delta
 

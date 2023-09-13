@@ -16,9 +16,9 @@ export class Heart {
 
     // lost heart x is at 77px, current heart is at 95px
     this.cropbox = {
-      x: 97,
+      x: 86,
       y: 0,
-      width: 18,
+      width: 16,
       height: 13,
     }
     this.currentFrame = 0
@@ -46,6 +46,6 @@ export class Heart {
 
   loseHeart() {
     this.state = 'empty'
-    this.cropbox.x = 79
+    this.cropbox.x = 70
   }
 }

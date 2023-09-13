@@ -6,6 +6,8 @@ import {
   SHRINK_DISTANCE,
 } from '../globals.js'
 import { boxCollision } from '../utils.js'
+const ATTACK_OFFSET_RIGHT = 40
+const BASE_VELOCITY = 20
 
 export class Soldier {
   constructor({
@@ -15,8 +17,10 @@ export class Soldier {
     direction = 'left',
     scale = 2.5,
     imageSrc,
+    travelDistance,
   }) {
     this.position = position
+    this.startingPosition = { ...position }
     this.velocity = velocity
     this.width = SOLDIER_WIDTH
     this.height = SOLDIER_HEIGHT * scale
@@ -36,6 +40,7 @@ export class Soldier {
       width: 20,
       height: 24,
       offset: {
+        x: 0,
         y: 10,
       },
     }
@@ -48,6 +53,8 @@ export class Soldier {
     this.totalScale = 1
     this.mass = mass
     this.direction = direction
+    this.attackFinished = false
+    this.travelDistance = travelDistance
   }
 
   draw(c) {
@@ -80,13 +87,13 @@ export class Soldier {
       this.cropbox.y,
       this.cropbox.width,
       this.cropbox.height,
-      -offsetX,
+      -offsetX + (this.cropbox.offset ? this.cropbox.offset.x : 0),
       -offsetY + (this.cropbox.offset ? this.cropbox.offset.y : 0), // Add safety check in case offset is not defined.
       this.cropbox.width * this.scale,
       this.cropbox.height * this.scale,
     )
 
-    this.renderDebugBoxes(c)
+    // this.renderDebugBoxes(c)
 
     c.restore()
 
@@ -119,26 +126,53 @@ export class Soldier {
     this.magnetize(blackHole)
     this.checkIfShouldDamagePlayer({ player, c })
 
-    const isTouchingPlayer = this.shouldAttackPlayer({ delta, player })
+    // turn around in either direction
+    if (
+      Math.abs(this.position.x - this.startingPosition.x) >=
+        this.travelDistance &&
+      this.state === 'walk'
+    ) {
+      // Flip the direction
+      this.direction = this.direction === 'right' ? 'left' : 'right'
+      // Reset the starting position for the next 100 pixels
+      this.startingPosition.x = this.position.x
+      this.velocity.x = -this.velocity.x
+    }
+
+    // determine which state to use
+    const isTouchingPlayer = this.shouldAttackPlayer({ delta, player, c })
     if (isTouchingPlayer && this.state === 'walk') {
       this.setAttackState()
-    } else if (!isTouchingPlayer && this.state === 'attack') {
+    } else if (
+      !isTouchingPlayer &&
+      this.state === 'attack' &&
+      this.attackFinished
+    ) {
+      this.currentFrame = 0
       this.setWalkState()
+      this.attackFinished = false // Reset for the next attack
     } else {
       this.position.x += this.velocity.x * delta
     }
   }
 
-  shouldAttackPlayer({ delta, player }) {
-    // if (direction === 'left') {
-    //   player.
-    // }
-
-    const isTouchingPlayer = boxCollision({ box1: this, box2: player })
-
-    if (isTouchingPlayer) {
-      return isTouchingPlayer
+  shouldAttackPlayer({ delta, player, c }) {
+    let soldierBoundingBox = {
+      position: { ...this.position },
+      width: this.width,
+      height: this.height,
     }
+
+    if (this.direction === 'left') {
+      soldierBoundingBox.position.x = this.position.x - this.width / 2
+    }
+
+    const isTouchingPlayer = boxCollision({
+      box1: soldierBoundingBox,
+      box2: player,
+    })
+
+    return isTouchingPlayer
   }
 
   applyGravity({ delta, canvas }) {
@@ -161,6 +195,10 @@ export class Soldier {
 
     this.checkIfAttackIsPermitted()
 
+    if (this.state === 'attack' && this.currentFrame === this.maxFrames - 1) {
+      this.attackFinished = true
+    }
+
     if (this.currentFrame >= this.maxFrames) {
       this.frames = 0
       this.currentFrame = 0
@@ -181,27 +219,40 @@ export class Soldier {
   }
 
   checkIfShouldDamagePlayer({ player, c }) {
+    const offsetX =
+      this.direction === 'right'
+        ? ATTACK_OFFSET_RIGHT
+        : -this.width + ATTACK_OFFSET_RIGHT + 30 // Adjust offsetX for left direction
+
     const attackbox = {
       position: {
-        x: this.position.x + 40,
+        x: this.position.x + offsetX,
         y: this.position.y,
       },
       width: SOLDIER_WIDTH,
       height: this.height,
     }
 
+    // c.fillStyle = 'rgba(255,0,0,0.8)'
+    // c.fillRect(
+    //   attackbox.position.x,
+    //   attackbox.position.y,
+    //   attackbox.width,
+    //   attackbox.height,
+    // )
+
     if (
       boxCollision({ box1: attackbox, box2: player }) &&
       this.attackPermitted &&
       !player.invincible
     ) {
-      c.fillStyle = 'rgba(0,255,0,0.8)'
-      c.fillRect(
-        attackbox.position.x,
-        attackbox.position.y,
-        attackbox.width,
-        attackbox.height,
-      )
+      // c.fillStyle = 'rgba(0,255,0,0.8)'
+      // c.fillRect(
+      //   attackbox.position.x,
+      //   attackbox.position.y,
+      //   attackbox.width,
+      //   attackbox.height,
+      // )
 
       player.loseHeart()
     }
@@ -213,14 +264,15 @@ export class Soldier {
       x: 38,
       y: 44,
       width: 38,
-      height: 28,
+      height: SOLDIER_HEIGHT,
       offset: {
-        y: 0,
+        x: this.direction === 'left' ? 70 : 0, // You might need to adjust this
+        y: -5,
       },
     }
     this.frames = 0
     this.maxFrames = 5
-    this.frameDelay = 22
+    this.frameDelay = 12
     this.currentFrame = 0
     this.velocity.x = 0
   }
@@ -234,6 +286,7 @@ export class Soldier {
       width: 20,
       height: 24,
       offset: {
+        x: 0,
         y: 10,
       },
     }
@@ -241,7 +294,8 @@ export class Soldier {
     this.maxFrames = 8
     this.frameDelay = 12
     this.currentFrame = 0
-    this.velocity.x = 0.2
+    this.velocity.x =
+      this.direction === 'left' ? BASE_VELOCITY * -1 : BASE_VELOCITY
   }
 
   magnetize(blackHole) {

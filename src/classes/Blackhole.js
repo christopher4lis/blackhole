@@ -1,5 +1,5 @@
 import { GROUND_HEIGHT, GROUND_FRICTION } from '../globals.js'
-import { circleRectCollisionResponse } from '../utils.js'
+import { circleRectCollisionResponse, circleRectCollision } from '../utils.js'
 export class Blackhole {
   constructor({
     position = { x: 0, y: 0 },
@@ -19,6 +19,8 @@ export class Blackhole {
     }
 
     this.timePassed = 0
+    this.isShrinking = false
+    this.isGrowing = true
   }
 
   draw(c) {
@@ -73,6 +75,8 @@ export class Blackhole {
     letters,
     font,
     gameInitialized,
+    spritesToMagnetize,
+    shrinkers,
   }) {
     this.draw(c)
     this.timePassed += 1.2 * delta
@@ -80,35 +84,41 @@ export class Blackhole {
     this.position.x += this.velocity.x * delta
     this.position.y += this.velocity.y * delta
 
-    // floor collision
-    if (this.position.y + this.radius >= canvas.height - GROUND_HEIGHT) {
-      this.velocity.y = 0
-      this.velocity.x *= GROUND_FRICTION
-      this.position.y = canvas.height - this.radius - GROUND_HEIGHT
-    }
+    this.handleFloorCollision(canvas)
+    this.handleCeilingCollision()
+    this.handleLeftBoundaryCollision(scroll)
+    this.handleRightBoundaryCollision(canvas, scroll)
+    this.handleBoxCollisions(boxes)
+    this.handleShrinkerCollisions(shrinkers)
+    this.runGrow(c)
+    this.shrinkToBaseSize()
+    this.drawPointer({ c, mouse })
+    this.magnetize(letters, font)
+    this.magnetize(spritesToMagnetize)
+  }
 
-    // ceiling collision
-    if (this.position.y - this.radius <= 0) {
-      this.velocity.y = 0
-      this.position.y = this.radius
-      this.velocity.x *= GROUND_FRICTION
+  shrinkToBaseSize() {
+    const RADIUS_SHRINK_RATE = 0.1
+    const BASE_RADIUS = 20
+    if (this.isShrinking && this.radius > BASE_RADIUS) {
+      this.radius -= RADIUS_SHRINK_RATE
+    } else if (this.radius <= BASE_RADIUS) {
+      this.isShrinking = false
     }
+  }
 
-    // x boundary collision
-    if (this.position.x - this.radius - scroll <= 0) {
-      this.position.x = this.radius + scroll
-      this.velocity.x = 0
-      this.velocity.y *= GROUND_FRICTION
+  handleShrinkerCollisions(shrinkers) {
+    for (let shrinker of shrinkers) {
+      if (circleRectCollision(this, shrinker)) {
+        this.isShrinking = true
+      }
     }
+  }
 
-    if (this.position.x + this.radius >= canvas.width + scroll) {
-      this.position.x = canvas.width - this.radius + scroll
-      this.velocity.x = 0
-      this.velocity.y *= GROUND_FRICTION
-    }
-
-    // Check for collisions with all boxes
+  handleBoxCollisions(boxes) {
     for (let box of boxes) {
+      if (this.radius > box.width / 2 && box.shouldMagnetize) return
+
       const collisionSide = circleRectCollisionResponse(this, box)
       if (collisionSide) {
         if (collisionSide === 'left' || collisionSide === 'right') {
@@ -123,10 +133,38 @@ export class Blackhole {
         break // Exit early once a collision is detected
       }
     }
+  }
 
-    this.runGrow(c)
-    this.drawPointer({ c, mouse })
-    this.magnetize(letters, font)
+  handleFloorCollision(canvas) {
+    if (this.position.y + this.radius >= canvas.height - GROUND_HEIGHT) {
+      this.velocity.y = 0
+      this.velocity.x *= GROUND_FRICTION
+      this.position.y = canvas.height - this.radius - GROUND_HEIGHT
+    }
+  }
+
+  handleCeilingCollision() {
+    if (this.position.y - this.radius <= 0) {
+      this.velocity.y = 0
+      this.position.y = this.radius
+      this.velocity.x *= GROUND_FRICTION
+    }
+  }
+
+  handleLeftBoundaryCollision(scroll) {
+    if (this.position.x - this.radius - scroll <= 0) {
+      this.position.x = this.radius + scroll
+      this.velocity.x = 0
+      this.velocity.y *= GROUND_FRICTION
+    }
+  }
+
+  handleRightBoundaryCollision(canvas, scroll) {
+    if (this.position.x + this.radius >= canvas.width + scroll) {
+      this.position.x = canvas.width - this.radius + scroll
+      this.velocity.x = 0
+      this.velocity.y *= GROUND_FRICTION
+    }
   }
 
   drawPointer({ c, mouse }) {
@@ -163,57 +201,81 @@ export class Blackhole {
   }
 
   grow(radius = 1) {
+    this.isGrowing = true
     this.newRadius = this.radius + radius
   }
 
   runGrow(c) {
     const RADIUS_GROWTH_RATE = 0.1
-    if (this.radius < this.newRadius) {
+    if (this.isGrowing && this.radius < this.newRadius) {
       this.radius += RADIUS_GROWTH_RATE
+    } else if (this.radius >= this.newRadius) {
+      this.isGrowing = false
     }
   }
 
-  magnetize(letters, font) {
-    // magnetize to black hole
-    const MIN_DISTANCE = 100 // set the minimum distance for attraction
-    const SUCKED_IN_THRESHOLD = 5 // Define a size threshold for a letter to be considered sucked in. Adjust as needed.
+  // Updated magnetize function
+  magnetize(objects, font) {
+    if (this.radius < 20) return
+    const MIN_DISTANCE = 100
+    const SUCKED_IN_THRESHOLD = 5
 
-    let allSuckedIn = true // Initially assume all letters are sucked in
+    let checkpointLetterSuckedIn = false
+    let allSuckedIn = true
 
-    for (let letter of letters) {
-      const directionX = this.position.x - (letter.x + letter.width / 2)
-      const directionY = this.position.y - (letter.y + letter.height / 2)
+    for (let object of objects) {
+      if (!object.shouldMagnetize) continue
+      const directionX =
+        this.position.x - (object.position.x + object.width / 2)
+      const directionY =
+        this.position.y - (object.position.y + object.height / 2)
       const distance = Math.sqrt(
         directionX * directionX + directionY * directionY,
       )
-      const dx = Math.min(10, 100 / distance) // adjust strength based on distance
+      const dx = Math.min(10, 100 / distance)
+
+      // Check if the black hole is larger than the object
+      if (this.radius <= Math.max(object.width / 2, object.height / 2)) {
+        allSuckedIn = false // The black hole is not large enough to magnetize this object
+        continue // Skip to the next iteration of the loop
+      }
 
       if (distance < MIN_DISTANCE) {
-        letter.x += (dx * directionX) / distance
-        letter.y += (dx * directionY) / distance
+        object.position.x += (dx * directionX) / distance
+        object.position.y += (dx * directionY) / distance
 
-        // If the letter comes within a specific distance of the black hole, make it shrink
         if (distance < this.radius) {
-          letter.width /= 2 // This makes the letter half its size when it's within the radius.
-          letter.height /= 2
+          // Shrink the object if it's inside the black hole's radius
+          object.width /= 2
+          object.height /= 2
 
-          // Check if letter is not yet "sucked in"
+          // If the object is still larger than the SUCKED_IN_THRESHOLD, it's not yet fully sucked in
           if (
-            letter.width > SUCKED_IN_THRESHOLD ||
-            letter.height > SUCKED_IN_THRESHOLD
+            object.width > SUCKED_IN_THRESHOLD ||
+            object.height > SUCKED_IN_THRESHOLD
           ) {
             allSuckedIn = false
           }
         } else {
-          allSuckedIn = false // If any letter is outside the black hole's radius, then not all letters are sucked in
+          allSuckedIn = false
         }
       } else {
-        allSuckedIn = false // If any letter is outside the minimum distance, then not all letters are sucked in
+        allSuckedIn = false
       }
     }
 
-    // If all letters are sucked into the black hole
-    if (allSuckedIn) {
+    for (let object of objects) {
+      if (
+        object.width <= SUCKED_IN_THRESHOLD &&
+        object.height <= SUCKED_IN_THRESHOLD &&
+        object.isCheckpoint
+      ) {
+        checkpointLetterSuckedIn = true
+      }
+    }
+
+    // Modify the condition to call nextSequence
+    if (allSuckedIn && font && !checkpointLetterSuckedIn) {
       font.nextSequence()
     }
   }

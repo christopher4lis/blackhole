@@ -8,6 +8,7 @@ import { Particle } from './classes/Particle.js'
 import { BitmapFont } from './classes/BitmapFont.js'
 import { Soldier } from './classes/Soldier.js'
 import { Orb } from './classes/Orb.js'
+import { Shrinker } from './classes/Shrinker.js'
 import { boxCollision } from './utils.js'
 import {
   SOLDIER_WIDTH,
@@ -23,9 +24,14 @@ const c = canvas.getContext('2d')
 canvas.width = 1024
 canvas.height = 576
 
+const DEBUG = true
+const SHOW_INTRO = false
+
 const FADE_SPEED = 0.003
 const GROUND_FRICTION = 0.98
 const MAP_TILES_PER_ROW = 64
+const MOUNTAIN_PARALLAX_SPEED = 0.6
+const FURTHER_MOUNTAIN_PARALLAX_SPEED = 0.7
 const PARTICLE_BASE_SIZE = 1
 const PARTICLE_ADDED_SIZE = 1
 const PLAYER_WIDTH = 45
@@ -39,10 +45,11 @@ const SHRINK_DISTANCE = 20
 const SKY_COLOR = '#181622'
 const POINTER_COLOR = '#993399'
 const DUST_COLOR = '#6abe30'
+c.imageSmoothingEnabled = false
 
 const groundSprites = []
 
-for (let i = 0; i < 30; i++) {
+for (let i = 0; i < 100; i++) {
   groundSprites.push(
     new Sprite({
       position: {
@@ -54,9 +61,9 @@ for (let i = 0; i < 30; i++) {
       imageSrc: spritesheet,
       cropbox: {
         x: 134,
-        y: 0,
-        width: 16,
-        height: 16,
+        y: 1,
+        width: 10,
+        height: 9,
       },
       scale: 4,
     }),
@@ -119,13 +126,16 @@ class Player {
     this.showWand = false
     this.wandAlpha = 0
     this.wandRadius = 1
+    this.alpha = 1
   }
 
   draw() {
+    c.globalAlpha = this.alpha
     if (this.imageLoaded) {
       this.drawSprite()
       if (this.showWand) this.drawWand()
     }
+    c.globalAlpha = 1
   }
 
   update({ delta, boxes }) {
@@ -139,6 +149,10 @@ class Player {
     this.renderSmokeTrail()
     // this.renderDebugBoxes()
     if (this.position.x < 0) this.position.x = 0
+
+    if (this.invincible) {
+      this.alpha = this.alpha === 1 ? 0 : 1
+    } else this.alpha = 1
   }
 
   checkForHorizontalCollisions({ boxes }) {
@@ -312,8 +326,8 @@ class Player {
     // hand
     c.drawImage(
       this.image,
-      64,
-      14,
+      63,
+      0,
       5,
       4,
       this.position.x + 15 + Math.cos(ANGLE_FROM_BLACKHOLE) * this.wandRadius,
@@ -341,7 +355,7 @@ class Player {
     )
     c.rotate(ANGLE_FROM_BLACKHOLE + Math.PI / 2)
     c.translate(-WAND_WIDTH / 2, -WAND_HEIGHT)
-    c.drawImage(this.image, 69, 0, 8, 18, 0, 0, WAND_WIDTH, WAND_HEIGHT)
+    c.drawImage(this.image, 63, 4, 7, 19, 0, 0, WAND_WIDTH, WAND_HEIGHT)
     c.restore()
     c.globalAlpha = 1
   }
@@ -365,14 +379,14 @@ class Player {
     setTimeout(() => {
       console.log('invincible lostt')
       this.invincible = false
-    }, 3000)
+    }, 2000)
 
     for (let i = this.hearts.length - 1; i >= 0; i--) {
       const heart = this.hearts[i]
 
       if (heart.state !== 'empty') {
         this.hearts[i].state = 'empty'
-        this.hearts[i].cropbox.x = 79
+        this.hearts[i].cropbox.x = 70
 
         break
       }
@@ -387,21 +401,7 @@ const player = new Player({
   },
 })
 
-const soldiers = [
-  // new Soldier({
-  //   position: {
-  //     x: canvas.width - 80,
-  //     y: canvas.height - SOLDIER_HEIGHT - 32,
-  //   },
-  //   velocity: {
-  //     x: -20.2,
-  //     y: 0,
-  //   },
-  //   direction: 'left',
-  //   scale: 3.5,
-  //   imageSrc: spritesheet,
-  // }),
-]
+const soldiers = []
 
 let prevTimestamp = Date.now()
 let dragPoints = []
@@ -466,7 +466,7 @@ function createOrbGrid({ position }) {
   }
 }
 
-// c.scale(0.5, 0.5)
+// c.scale(0.2, 0.2)
 createOrbGrid({
   position: {
     x: 1320,
@@ -475,16 +475,16 @@ createOrbGrid({
 })
 
 // in milliseconds
-const SKIP_INTRO = false
-const SEQUENCE_DELAY_1 = SKIP_INTRO ? 2000 : 100
-const SEQUENCE_DELAY_2 = SKIP_INTRO ? 1000 : 100
-const SEQUENCE_DELAY_3 = SKIP_INTRO ? 5000 : 100
-const SEQUENCE_DELAY_4 = SKIP_INTRO ? 4000 : 100
+const SEQUENCE_DELAY_1 = SHOW_INTRO ? 2000 : 100
+const SEQUENCE_DELAY_2 = SHOW_INTRO ? 1000 : 100
+const SEQUENCE_DELAY_3 = SHOW_INTRO ? 5000 : 100
+const SEQUENCE_DELAY_4 = SHOW_INTRO ? 4000 : 100
 
 let fadeAlpha = 1.0
 setTimeout(() => {
   game.startFadeFromBlack = true
 }, SEQUENCE_DELAY_1)
+
 const game = {
   initalized: false,
   allowPlayerInput: false,
@@ -507,7 +507,7 @@ const game = {
         setTimeout(() => {
           // with you lies the power of omni
           font.nextSequence()
-          blackHole.grow(25)
+          blackHole.grow(20)
 
           setTimeout(() => {
             // draw your wand and use its power wisely
@@ -563,6 +563,15 @@ const game = {
       scroll.value += SCROLL_SPEED * delta
       c.translate(-SCROLL_SPEED * delta, 0)
       player.position.x += SCROLL_SPEED * delta
+
+      mountains.forEach((mountain) => {
+        mountain.position.x += SCROLL_SPEED * delta * MOUNTAIN_PARALLAX_SPEED
+      })
+
+      furtherMountains.forEach((mountain) => {
+        mountain.position.x +=
+          SCROLL_SPEED * delta * FURTHER_MOUNTAIN_PARALLAX_SPEED
+      })
     }
   },
   movePlayerLeftAndScroll({ player, scroll, delta }) {
@@ -576,6 +585,15 @@ const game = {
       scroll.value -= SCROLL_SPEED * delta
       c.translate(SCROLL_SPEED * delta, 0)
       player.position.x -= SCROLL_SPEED * delta
+
+      mountains.forEach((mountain) => {
+        mountain.position.x -= SCROLL_SPEED * delta * MOUNTAIN_PARALLAX_SPEED
+      })
+
+      furtherMountains.forEach((mountain) => {
+        mountain.position.x -=
+          SCROLL_SPEED * delta * FURTHER_MOUNTAIN_PARALLAX_SPEED
+      })
     }
   },
 }
@@ -602,6 +620,13 @@ const font = new BitmapFont({
   charHeight: 14,
   charsPerRow: 26,
 })
+
+if (DEBUG) {
+  game.initalized = true
+  game.allowPlayerKeysInput = true
+  game.allowPlayerInput = true
+  blackHole.radius = 20
+}
 
 const pointer = new Sprite({
   position: {
@@ -631,7 +656,7 @@ const boxes = [
     height: 16,
     imageSrc: spritesheet,
     cropbox: {
-      x: 116,
+      x: 102,
       y: 0,
       width: 16,
       height: 16,
@@ -639,6 +664,7 @@ const boxes = [
     scale: 3,
     shouldApplyGravity: true,
     shouldApplyCollisions: true,
+    shouldMagnetize: true,
   }),
   new Sprite({
     position: {
@@ -649,7 +675,7 @@ const boxes = [
     height: 16,
     imageSrc: spritesheet,
     cropbox: {
-      x: 116,
+      x: 102,
       y: 0,
       width: 16,
       height: 16,
@@ -657,6 +683,7 @@ const boxes = [
     scale: 3,
     shouldApplyGravity: true,
     shouldApplyCollisions: true,
+    shouldMagnetize: true,
   }),
   new Sprite({
     position: {
@@ -667,7 +694,7 @@ const boxes = [
     height: 16,
     imageSrc: spritesheet,
     cropbox: {
-      x: 116,
+      x: 102,
       y: 0,
       width: 16,
       height: 16,
@@ -675,24 +702,179 @@ const boxes = [
     scale: 3,
     shouldApplyGravity: true,
     shouldApplyCollisions: true,
+    shouldMagnetize: true,
   }),
 ]
 
 pointer.initAnimation(pointer.position.x, 420, 200)
-const sprites = [...groundSprites, ...boxes]
 
-font.init()
+const mountains = []
+const furtherMountains = []
+for (let i = 0; i < 10; i++) {
+  mountains.push(
+    new Sprite({
+      position: {
+        x: 576 * i,
+        y: 389,
+      },
+      width: 18,
+      height: 5,
+      imageSrc: spritesheet,
+      cropbox: {
+        x: 134,
+        y: 9,
+        width: 18,
+        height: 5,
+      },
+      scale: 32,
+    }),
+  )
+
+  furtherMountains.push(
+    new Sprite({
+      position: {
+        x: i * 576 - 162,
+        y: 430,
+      },
+      width: 18,
+      height: 5,
+      imageSrc: spritesheet,
+      cropbox: {
+        x: 134,
+        y: 14,
+        width: 18,
+        height: 5,
+      },
+      scale: 18,
+    }),
+  )
+}
+
+const sprites = [...boxes]
+const backgroundSprites = [...furtherMountains, ...mountains, ...groundSprites]
+const shrinkers = []
+
+function createSecondSection() {
+  const SCALE = 3
+  const START_X = 2000
+  const START_Y = 158
+  const BOX_WIDTH = 16 * SCALE
+  const BOX_HEIGHT = 16 * SCALE
+
+  // horizontal strip
+  for (let i = 0; i < 22; i++) {
+    boxes.push(
+      new Sprite({
+        position: {
+          x: START_X + i * BOX_WIDTH,
+          y: START_Y,
+        },
+        width: 16,
+        height: 16,
+        imageSrc: spritesheet,
+        cropbox: {
+          x: 118,
+          y: 0,
+          width: 16,
+          height: 16,
+        },
+        scale: SCALE,
+        shouldApplyGravity: false,
+        shouldApplyCollisions: true,
+      }),
+    )
+  }
+
+  // vertical strip
+  for (let i = 0; i < 6; i++) {
+    boxes.push(
+      new Sprite({
+        position: {
+          x: START_X + 21 * BOX_WIDTH,
+          y: START_Y + BOX_HEIGHT * i,
+        },
+        width: 16,
+        height: 16,
+        imageSrc: spritesheet,
+        cropbox: {
+          x: 118,
+          y: 0,
+          width: 16,
+          height: 16,
+        },
+        scale: SCALE,
+        shouldApplyGravity: false,
+        shouldApplyCollisions: true,
+      }),
+    )
+  }
+
+  // remaining 2 boxes
+  for (let i = 0; i < 2; i++) {
+    boxes.push(
+      new Sprite({
+        position: {
+          x: START_X + 21 * BOX_WIDTH,
+          y: START_Y + BOX_HEIGHT * (6 + i),
+        },
+        width: 16,
+        height: 16,
+        imageSrc: spritesheet,
+        cropbox: {
+          x: 102,
+          y: 0,
+          width: 16,
+          height: 16,
+        },
+        scale: SCALE,
+        shouldApplyGravity: false,
+        shouldApplyCollisions: true,
+        shouldMagnetize: true,
+      }),
+    )
+  }
+
+  // shrinkers
+  shrinkers.push(
+    new Shrinker({
+      position: {
+        x: START_X,
+        y: 198,
+      },
+      width: 48,
+      height: 346,
+    }),
+  )
+
+  // soldiers
+  soldiers.push(
+    new Soldier({
+      position: {
+        x: START_X + 900,
+        y: canvas.height - SOLDIER_HEIGHT - 32,
+      },
+      velocity: {
+        x: -40,
+        y: 0,
+      },
+      travelDistance: 200,
+      scale: 3.5,
+      imageSrc: spritesheet,
+    }),
+  )
+}
+
+createSecondSection()
 
 function animate() {
   requestAnimationFrame(animate)
-
-  console.log(player.position.x)
 
   const currentTimestamp = Date.now()
   const delta = (currentTimestamp - prevTimestamp) / 1000
   prevTimestamp = currentTimestamp
 
   c.clearRect(scroll.value, 0, canvas.width, canvas.height)
+  c.clearRect(scroll.value, 0, 199999, 1999)
   c.fillStyle = SKY_COLOR
   c.fillRect(scroll.value, 0, canvas.width, canvas.height)
 
@@ -701,19 +883,24 @@ function animate() {
   })
 
   // if (blackHole.allSuckedCount === 1) pointer.fadeOut = true
-  pointer.update({ c, canvas, delta })
-  pointer.animateArrow(c)
+  backgroundSprites.forEach((sprite) => {
+    sprite.update({ c, canvas, delta, player, otherSprites: boxes })
+  })
+
+  shrinkers.forEach((shrinker) => {
+    shrinker.update({ c, delta, scroll })
+  })
+
   game.renderParticles({ particles, delta })
 
-  if (font.currentSequence === 11) {
+  pointer.update({ c, canvas, delta })
+  pointer.animateArrow(c)
+
+  if (font.currentSequence === 4) {
     pointer.fadeIn = false
     pointer.fadeOut = true
     game.allowPlayerKeysInput = true
   }
-
-  sprites.forEach((sprite) => {
-    sprite.update({ c, canvas, delta, player, otherSprites: boxes })
-  })
 
   blackHole.update({
     delta,
@@ -724,7 +911,24 @@ function animate() {
     boxes,
     letters: font.letters,
     font,
+    spritesToMagnetize: boxes,
+    shrinkers,
   })
+
+  for (let i = boxes.length - 1; i >= 0; i--) {
+    const sprite = boxes[i]
+    if (sprite.width <= 5) boxes.splice(i, 1)
+    else
+      sprite.update({
+        c,
+        canvas,
+        delta,
+        player,
+        otherSprites: boxes,
+        blackHole,
+      })
+  }
+
   player.update({ delta, boxes, scroll })
   game.renderOrbs({ orbs, delta })
 
@@ -778,12 +982,14 @@ function animate() {
     c.fill()
   }
 
-  game.fadeFromBlack()
+  if (!DEBUG) game.fadeFromBlack()
 
   for (let letter of font.letters) {
     letter.animate()
     letter.draw(c)
   }
+
+  font.updateScrollPosition(player.position.x)
 }
 
 animate()
