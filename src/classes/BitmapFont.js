@@ -33,9 +33,17 @@ export class BitmapFont {
         activated: false,
       },
       {
-        activationDistance: 2200,
+        activationDistance: 2100,
         x: 2400,
         y: 300,
+        text: 'BEWARE KNIGHTS LARGER THAN YOUR VOID',
+        activated: false,
+      },
+
+      {
+        activationDistance: 10,
+        x: 3400,
+        y: 100,
         text: 'BEWARE KNIGHTS LARGER THAN YOUR VOID',
         activated: false,
       },
@@ -95,10 +103,22 @@ export class BitmapFont {
   nextSequence() {
     this.currentSequence++
     if (this.currentSequence < this.letterSequences.length) {
-      this.letters = [...this.letterSequences[this.currentSequence]]
+      // Clear any checkpoint text before updating the sequence.
+      this.letters = this.letters.filter((letter) => !letter.isCheckpoint)
+      this.letters.push(...this.letterSequences[this.currentSequence])
+
+      // Reset any activated checkpoints.
+      for (const checkpoint of this.checkpoints) {
+        checkpoint.activated = false
+      }
     } else {
       this.letters = []
     }
+  }
+
+  showCheckpointText(text, x, y) {
+    const checkpointLetters = this.createText(text, x, y, true)
+    this.letters.push(...checkpointLetters) // Append the checkpoint letters to the existing letters
   }
 
   updateScrollPosition(x) {
@@ -110,10 +130,6 @@ export class BitmapFont {
         this.showCheckpointText(checkpoint.text, checkpoint.x, checkpoint.y)
       }
     }
-  }
-  showCheckpointText(text, x, y) {
-    const checkpointLetters = this.createText(text, x, y, true)
-    this.letters = [...checkpointLetters]
   }
 
   createText(text, x, y, isCheckpoint = false) {

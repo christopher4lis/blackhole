@@ -49,7 +49,7 @@ c.imageSmoothingEnabled = false
 
 const groundSprites = []
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 93; i++) {
   groundSprites.push(
     new Sprite({
       position: {
@@ -145,7 +145,6 @@ class Player {
     this.position.x += this.velocity.x * delta
     this.checkForHorizontalCollisions({ boxes })
     this.applyGravity(delta)
-    this.checkForVerticalCollisions({ boxes })
     this.renderSmokeTrail()
     // this.renderDebugBoxes()
     if (this.position.x < 0) this.position.x = 0
@@ -158,6 +157,7 @@ class Player {
   checkForHorizontalCollisions({ boxes }) {
     for (let i = 0; i < boxes.length; i++) {
       const box = boxes[i]
+      if (box.underBlackHoleInfluence) continue
 
       const isAboveBox = this.position.y + this.height <= box.position.y
       if (isAboveBox) continue
@@ -176,21 +176,35 @@ class Player {
   }
 
   checkForVerticalCollisions({ boxes }) {
+    let hasCollision = false
     for (let i = 0; i < boxes.length; i++) {
       const box = boxes[i]
+      if (box.underBlackHoleInfluence) continue
 
       if (boxCollision({ box1: this, box2: box })) {
-        // If the player is moving downward and is just above the box
         if (
           this.velocity.y > 0 &&
           this.position.y + this.height >= box.position.y
         ) {
-          this.position.y = box.position.y - this.height // Position the player on top of the box
-          this.velocity.y = 0 // Stop any downward motion
+          // Moving downwards
+          this.position.y = box.position.y - this.height
+          this.velocity.y = 0
+          this.jumpCount = 0
+          hasCollision = true
+          break
+        } else if (
+          this.velocity.y < 0 &&
+          this.position.y <= box.position.y + box.height
+        ) {
+          // Moving upwards
+          this.position.y = box.position.y + box.height + 1
+          this.velocity.y = 0
+          hasCollision = true
           break
         }
       }
     }
+    return hasCollision
   }
 
   renderDebugBoxes() {
@@ -231,40 +245,15 @@ class Player {
         )
       this.timePassed = 0
     }
-
-    // const radius = 3
-    // c.save()
-    // c.beginPath()
-
-    // if (blackHole.position.x < this.position.x) {
-    //   c.scale(-1, 1)
-    //   c.arc(
-    //     -this.position.x - this.width,
-    //     this.position.y + this.height,
-    //     radius,
-    //     0,
-    //     Math.PI * 2,
-    //     false,
-    //   )
-    // } else {
-    //   c.arc(
-    //     this.position.x,
-    //     this.position.y + this.height,
-    //     radius,
-    //     0,
-    //     Math.PI * 2,
-    //     false,
-    //   )
-    // }
-    // c.closePath()
-    // c.fillStyle = 'red'
-    // c.fill()
-    // c.restore()
   }
 
   applyGravity(delta) {
     this.position.y += this.velocity.y * delta
-    this.velocity.y += GRAVITY * delta
+    const hasBoxCollision = this.checkForVerticalCollisions({ boxes })
+
+    if (!hasBoxCollision) {
+      this.velocity.y += GRAVITY * delta
+    }
 
     // if touching ground
     if (this.position.y + this.height >= canvas.height - GROUND_HEIGHT) {
@@ -423,7 +412,7 @@ const blackHole = new Blackhole({
     x: canvas.width / 2,
     y: 150,
   },
-  radius: 0,
+  radius: 30,
 })
 
 const levels = {
@@ -450,9 +439,9 @@ const levels = {
 const particles = []
 const orbs = []
 
-function createOrbGrid({ position }) {
-  for (let i = 3; i < 8; i++) {
-    for (let j = 3; j < 8; j++) {
+function createOrbGrid({ position, rows = 5, cols = 5 }) {
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
       orbs.push(
         new Orb({
           position: {
@@ -469,8 +458,15 @@ function createOrbGrid({ position }) {
 // c.scale(0.2, 0.2)
 createOrbGrid({
   position: {
-    x: 1320,
-    y: 10,
+    x: 1420,
+    y: 100,
+  },
+})
+
+createOrbGrid({
+  position: {
+    x: 3100,
+    y: 380,
   },
 })
 
@@ -537,7 +533,7 @@ const game = {
 
       if (orb.radius <= 0) {
         orbs.splice(i, 1)
-        blackHole.grow(0.5)
+        blackHole.grow(0.75)
       } else {
         orb.update({ delta, c, blackHole })
         if (distance < 30 && orb.state !== 'shrink') orb.shrink()
@@ -851,20 +847,146 @@ function createSecondSection() {
     new Soldier({
       position: {
         x: START_X + 900,
-        y: canvas.height - SOLDIER_HEIGHT - 32,
+        // x: 800,
+        y: canvas.height - SOLDIER_HEIGHT,
       },
       velocity: {
         x: -40,
         y: 0,
       },
       travelDistance: 200,
-      scale: 3.5,
+      scale: 3,
+      imageSrc: spritesheet,
+    }),
+  )
+}
+
+function createThirdSection() {
+  const SCALE = 3
+  const START_X = 700
+  // const START_X = 3700
+  const START_Y = 17
+  const BOX_WIDTH = 16 * SCALE
+  const BOX_HEIGHT = 16 * SCALE
+
+  // horizontal strip
+  for (let i = 0; i < 32; i++) {
+    for (let j = 0; j < 11; j++) {
+      if (j > 7 && j < 11 && i > 5 && i < 9) continue
+      if (j > 2 && j < 6 && i > 5 && i < 9) continue
+      if (j > 5 && j < 11 && i > 13 && i < 19) continue
+      if (j >= 0 && j < 5 && i > 23 && i < 26) {
+        boxes.push(
+          new Sprite({
+            position: {
+              x: START_X + i * BOX_WIDTH,
+              y: START_Y + j * BOX_HEIGHT,
+            },
+            width: 16,
+            height: 16,
+            imageSrc: spritesheet,
+            cropbox: {
+              x: 118,
+              y: 0,
+              width: 16,
+              height: 16,
+            },
+            scale: SCALE,
+            shouldApplyGravity: false,
+            shouldApplyCollisions: true,
+          }),
+        )
+      }
+
+      if (j >= 9 && j < 11 && i > 23 && i < 26) continue
+      boxes.push(
+        new Sprite({
+          position: {
+            x: START_X + i * BOX_WIDTH,
+            y: START_Y + j * BOX_HEIGHT,
+          },
+          width: 16,
+          height: 16,
+          imageSrc: spritesheet,
+          cropbox: {
+            x: 102,
+            y: 0,
+            width: 16,
+            height: 16,
+          },
+          scale: SCALE,
+          shouldApplyGravity: false,
+          shouldApplyCollisions: true,
+          shouldMagnetize: true,
+        }),
+      )
+    }
+  }
+
+  createOrbGrid({
+    position: {
+      x: START_X + 315,
+      y: 190,
+    },
+    rows: 4,
+    cols: 4,
+  })
+
+  // soldiers
+  soldiers.push(
+    new Soldier({
+      position: {
+        x: START_X + 333,
+        // x: 800,
+        y: canvas.height - SOLDIER_HEIGHT - 10,
+      },
+      velocity: {
+        x: -40,
+        y: 0,
+      },
+      travelDistance: 50,
+      scale: 5,
+      imageSrc: spritesheet,
+    }),
+  )
+
+  soldiers.push(
+    new Soldier({
+      position: {
+        x: START_X + 743,
+        // x: 800,
+        y: canvas.height - SOLDIER_HEIGHT - 10,
+      },
+      velocity: {
+        x: -40,
+        y: 0,
+      },
+      travelDistance: 60,
+      scale: 8,
+      imageSrc: spritesheet,
+    }),
+  )
+
+  soldiers.push(
+    new Soldier({
+      position: {
+        x: START_X + 1183,
+        // x: 800,
+        y: canvas.height - SOLDIER_HEIGHT - 10,
+      },
+      velocity: {
+        x: -40,
+        y: 0,
+      },
+      travelDistance: 25,
+      scale: 3,
       imageSrc: spritesheet,
     }),
   )
 }
 
 createSecondSection()
+createThirdSection()
 
 function animate() {
   requestAnimationFrame(animate)
@@ -911,7 +1033,7 @@ function animate() {
     boxes,
     letters: font.letters,
     font,
-    spritesToMagnetize: boxes,
+    spritesToMagnetize: [...boxes, ...soldiers],
     shrinkers,
   })
 
@@ -949,10 +1071,10 @@ function animate() {
   for (let i = soldiers.length - 1; i >= 0; i--) {
     const soldier = soldiers[i]
 
-    if (soldier.totalScale <= 0.1) {
+    if (soldier.width <= 5) {
       blackHole.newRadius += soldier.mass
       soldiers.splice(i, 1)
-    } else soldier.update({ canvas, player, delta, blackHole, c })
+    } else soldier.update({ canvas, player, delta, blackHole, c, boxes })
   }
 
   if (dragPoints.length > 0) {
@@ -1092,12 +1214,6 @@ addEventListener('keyup', (e) => {
       break
     case 'KeyD':
       keys.d.down = false
-      break
-    case 'KeyW':
-      player.velocity.y += -1
-      break
-    case 'KeyS':
-      player.velocity.y += 1
       break
   }
 })

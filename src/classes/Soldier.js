@@ -22,7 +22,7 @@ export class Soldier {
     this.position = position
     this.startingPosition = { ...position }
     this.velocity = velocity
-    this.width = SOLDIER_WIDTH
+    this.width = 20 * scale
     this.height = SOLDIER_HEIGHT * scale
     this.msPassed = 0
     this.ATTACK_RATE = 2000
@@ -55,6 +55,8 @@ export class Soldier {
     this.direction = direction
     this.attackFinished = false
     this.travelDistance = travelDistance
+    this.shouldMagnetize = true
+    this.type = 'soldier'
   }
 
   draw(c) {
@@ -85,15 +87,15 @@ export class Soldier {
       this.image,
       this.cropbox.x * this.currentFrame,
       this.cropbox.y,
-      this.cropbox.width,
-      this.cropbox.height,
+      this.width / this.scale,
+      this.height / this.scale,
       -offsetX + (this.cropbox.offset ? this.cropbox.offset.x : 0),
       -offsetY + (this.cropbox.offset ? this.cropbox.offset.y : 0), // Add safety check in case offset is not defined.
-      this.cropbox.width * this.scale,
-      this.cropbox.height * this.scale,
+      this.width,
+      this.height,
     )
 
-    // this.renderDebugBoxes(c)
+    this.renderDebugBoxes(c)
 
     c.restore()
 
@@ -119,11 +121,11 @@ export class Soldier {
     )
   }
 
-  update({ c, player, delta, blackHole, canvas }) {
+  update({ c, player, delta, blackHole, canvas, boxes }) {
     this.draw(c)
     this.animateSprite(c)
-    this.applyGravity({ delta, canvas })
-    this.magnetize(blackHole)
+    this.checkForVerticalCollisions({ boxes })
+    this.applyGravity({ delta, canvas, blackHole })
     this.checkIfShouldDamagePlayer({ player, c })
 
     // turn around in either direction
@@ -175,7 +177,17 @@ export class Soldier {
     return isTouchingPlayer
   }
 
-  applyGravity({ delta, canvas }) {
+  applyGravity({ delta, canvas, blackHole }) {
+    // Check if under black hole's influence
+    const distanceToBlackHole = Math.sqrt(
+      Math.pow(this.position.x + this.width / 2 - blackHole.position.x, 2) +
+        Math.pow(this.position.y + this.height / 2 - blackHole.position.y, 2),
+    )
+
+    const underBlackHoleInfluence = distanceToBlackHole < 100 // You'll need to define this constant or determine it dynamically
+
+    if (underBlackHoleInfluence) return
+
     this.position.y += this.velocity.y * delta
     this.velocity.y += GRAVITY
 
@@ -260,13 +272,14 @@ export class Soldier {
 
   setAttackState() {
     this.state = 'attack'
+    this.width = 38 * this.scale
     this.cropbox = {
       x: 38,
       y: 44,
       width: 38,
       height: SOLDIER_HEIGHT,
       offset: {
-        x: this.direction === 'left' ? 70 : 0, // You might need to adjust this
+        x: this.direction === 'left' ? 50 : 0, // You might need to adjust this
         y: -5,
       },
     }
@@ -277,8 +290,39 @@ export class Soldier {
     this.velocity.x = 0
   }
 
+  checkForVerticalCollisions({ boxes }) {
+    let hasCollision = false
+    for (let i = 0; i < boxes.length; i++) {
+      const box = boxes[i]
+
+      if (boxCollision({ box1: this, box2: box })) {
+        if (
+          this.velocity.y > 0 &&
+          this.position.y + this.height >= box.position.y
+        ) {
+          // Moving downwards
+          this.position.y = box.position.y - this.height
+          this.velocity.y = 0
+          hasCollision = true
+          break
+        } else if (
+          this.velocity.y < 0 &&
+          this.position.y <= box.position.y + box.height
+        ) {
+          // Moving upwards
+          this.position.y = box.position.y + box.height
+          this.velocity.y = 0
+          hasCollision = true
+          break
+        }
+      }
+    }
+    return hasCollision
+  }
+
   setWalkState() {
     if (this.currentFrame !== 0) return
+    this.width = 20 * this.scale
     this.state = 'walk'
     this.cropbox = {
       x: 20,
@@ -296,25 +340,5 @@ export class Soldier {
     this.currentFrame = 0
     this.velocity.x =
       this.direction === 'left' ? BASE_VELOCITY * -1 : BASE_VELOCITY
-  }
-
-  magnetize(blackHole) {
-    // magnetize to black hole
-    const MIN_DISTANCE = 200 // set the minimum distance for attraction
-    const directionX =
-      blackHole.position.x - (this.position.x + this.width / 2 - 15)
-    const directionY =
-      blackHole.position.y - (this.position.y + this.height / 2)
-    const distance = Math.sqrt(
-      directionX * directionX + directionY * directionY,
-    )
-    const dx = Math.min(10, 100 / distance) // adjust strength based on distance
-
-    if (distance < MIN_DISTANCE) {
-      this.position.x += (dx * directionX) / distance
-      this.position.y += (dx * directionY) / distance
-    }
-
-    if (distance < SHRINK_DISTANCE) this.shrink = true
   }
 }

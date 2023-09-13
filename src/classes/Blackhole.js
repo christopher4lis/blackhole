@@ -117,7 +117,7 @@ export class Blackhole {
 
   handleBoxCollisions(boxes) {
     for (let box of boxes) {
-      if (this.radius > box.width / 2 && box.shouldMagnetize) return
+      if (this.radius > box.width / 2 && box.shouldMagnetize) continue
 
       const collisionSide = circleRectCollisionResponse(this, box)
       if (collisionSide) {
@@ -235,12 +235,19 @@ export class Blackhole {
       const dx = Math.min(10, 100 / distance)
 
       // Check if the black hole is larger than the object
-      if (this.radius <= Math.max(object.width / 2, object.height / 2)) {
+
+      if (this.radius <= Math.min(object.width / 2, object.height / 2)) {
         allSuckedIn = false // The black hole is not large enough to magnetize this object
+        if (object.type === 'soldier') console.log('TOO SMALL')
+
         continue // Skip to the next iteration of the loop
       }
 
       if (distance < MIN_DISTANCE) {
+        object.underBlackHoleInfluence = true
+        setTimeout(() => {
+          object.underBlackHoleInfluence = false
+        }, 500)
         object.position.x += (dx * directionX) / distance
         object.position.y += (dx * directionY) / distance
 
