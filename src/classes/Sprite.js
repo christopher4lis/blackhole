@@ -39,6 +39,8 @@ export class Sprite {
     this.fadeOut = false
     this.shouldMagnetize = shouldMagnetize
     this.underBlackHoleInfluence = false
+    this.scaledDownWidth = this.width / this.scale
+    this.scaledDownHeight = this.height / this.scale
   }
 
   draw(c) {
@@ -47,8 +49,8 @@ export class Sprite {
       this.image,
       this.cropbox.x,
       this.cropbox.y,
-      this.width / this.scale,
-      this.height / this.scale,
+      this.scaledDownWidth,
+      this.scaledDownHeight,
       this.position.x,
       this.position.y,
       this.width,

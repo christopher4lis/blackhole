@@ -41,25 +41,34 @@ export class BitmapFont {
       },
 
       {
-        activationDistance: 10,
-        x: 3400,
+        activationDistance: 3200,
+        x: 3200,
         y: 100,
-        text: 'BEWARE KNIGHTS LARGER THAN YOUR VOID',
+        text: 'CARVE YOUR PATH TO GREATNESS',
         activated: false,
+      },
+      {
+        activationDistance: 7000,
+        x: 7250,
+        y: 100,
+        text: 'IM TIRED AND NEED TO GO TO BED NOW',
+        activated: false,
+        shouldMagentize: false,
+      },
+
+      {
+        activationDistance: 7000,
+        x: 7250,
+        y: 120,
+        text: 'THANKS FOR PLAYING',
+        activated: false,
+        shouldMagentize: false,
       },
     ]
   }
 
   init() {
     this.letterSequences.push(this.createText('YOUNG MAGI AWAKEN', 425, 300))
-
-    // this.letterSequences.push(
-    //   this.createText(
-    //     'ENVIOUS KNIGHTS DESIRE NOTHING MORE THAN TO STEAL WHAT IS OURS',
-    //     200,
-    //     300,
-    //   ),
-    // )
 
     this.letterSequences.push(
       this.createText('WITH YOU LIES THE POWER OF VOID', 360, 300),
@@ -104,7 +113,7 @@ export class BitmapFont {
     this.currentSequence++
     if (this.currentSequence < this.letterSequences.length) {
       // Clear any checkpoint text before updating the sequence.
-      this.letters = this.letters.filter((letter) => !letter.isCheckpoint)
+      this.letters = []
       this.letters.push(...this.letterSequences[this.currentSequence])
 
       // Reset any activated checkpoints.
@@ -116,8 +125,8 @@ export class BitmapFont {
     }
   }
 
-  showCheckpointText(text, x, y) {
-    const checkpointLetters = this.createText(text, x, y, true)
+  showCheckpointText(text, x, y, shouldMagentize) {
+    const checkpointLetters = this.createText(text, x, y, true, shouldMagentize)
     this.letters.push(...checkpointLetters) // Append the checkpoint letters to the existing letters
   }
 
@@ -127,12 +136,17 @@ export class BitmapFont {
     for (const checkpoint of this.checkpoints) {
       if (x >= checkpoint.activationDistance && !checkpoint.activated) {
         checkpoint.activated = true
-        this.showCheckpointText(checkpoint.text, checkpoint.x, checkpoint.y)
+        this.showCheckpointText(
+          checkpoint.text,
+          checkpoint.x,
+          checkpoint.y,
+          checkpoint.shouldMagentize,
+        )
       }
     }
   }
 
-  createText(text, x, y, isCheckpoint = false) {
+  createText(text, x, y, isCheckpoint = false, shouldMagentize = true) {
     if (!this.isLoaded) {
       console.warn('Bitmap font image not yet loaded.')
       this.onImageLoad = () => {
@@ -175,6 +189,7 @@ export class BitmapFont {
           height: this.charHeight,
           delay: currentDelay, // Add delay for staggered animation
           isCheckpoint,
+          shouldMagentize,
         })
 
         letters.push(letter)

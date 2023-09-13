@@ -24,11 +24,12 @@ const c = canvas.getContext('2d')
 canvas.width = 1024
 canvas.height = 576
 
-const DEBUG = true
-const SHOW_INTRO = false
+const DEBUG = false
+const SHOW_INTRO = true
 
 const FADE_SPEED = 0.003
 const GROUND_FRICTION = 0.98
+const GROUND_TILE_COUNT = 193
 const MAP_TILES_PER_ROW = 64
 const MOUNTAIN_PARALLAX_SPEED = 0.6
 const FURTHER_MOUNTAIN_PARALLAX_SPEED = 0.7
@@ -49,7 +50,7 @@ c.imageSmoothingEnabled = false
 
 const groundSprites = []
 
-for (let i = 0; i < 93; i++) {
+for (let i = 0; i < GROUND_TILE_COUNT; i++) {
   groundSprites.push(
     new Sprite({
       position: {
@@ -148,6 +149,8 @@ class Player {
     this.renderSmokeTrail()
     // this.renderDebugBoxes()
     if (this.position.x < 0) this.position.x = 0
+    if (this.position.x + this.width >= 7677)
+      this.position.x = 7677 - this.width
 
     if (this.invincible) {
       this.alpha = this.alpha === 1 ? 0 : 1
@@ -412,7 +415,7 @@ const blackHole = new Blackhole({
     x: canvas.width / 2,
     y: 150,
   },
-  radius: 30,
+  radius: 0,
 })
 
 const levels = {
@@ -455,7 +458,7 @@ function createOrbGrid({ position, rows = 5, cols = 5 }) {
   }
 }
 
-// c.scale(0.2, 0.2)
+// c.scale(0.1, 0.2)
 createOrbGrid({
   position: {
     x: 1420,
@@ -552,7 +555,8 @@ const game = {
   movePlayerRightAndScroll({ player, scroll, delta }) {
     if (
       player.position.x <
-      canvas.width / 2 + SCROLL_BUFFER_FOR_PLAYER + scroll.value
+        canvas.width / 2 + SCROLL_BUFFER_FOR_PLAYER + scroll.value ||
+      scroll.value > 6700
     )
       player.velocity.x = PLAYER_VELOCITY_X
     else {
@@ -863,14 +867,14 @@ function createSecondSection() {
 
 function createThirdSection() {
   const SCALE = 3
-  const START_X = 700
-  // const START_X = 3700
+  // const START_X = 700
+  const START_X = 3700
   const START_Y = 17
   const BOX_WIDTH = 16 * SCALE
   const BOX_HEIGHT = 16 * SCALE
 
   // horizontal strip
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 62; i++) {
     for (let j = 0; j < 11; j++) {
       if (j > 7 && j < 11 && i > 5 && i < 9) continue
       if (j > 2 && j < 6 && i > 5 && i < 9) continue
@@ -899,27 +903,42 @@ function createThirdSection() {
       }
 
       if (j >= 9 && j < 11 && i > 23 && i < 26) continue
-      boxes.push(
-        new Sprite({
-          position: {
-            x: START_X + i * BOX_WIDTH,
-            y: START_Y + j * BOX_HEIGHT,
-          },
-          width: 16,
-          height: 16,
-          imageSrc: spritesheet,
-          cropbox: {
-            x: 102,
-            y: 0,
+
+      if (i < 32)
+        boxes.push(
+          new Sprite({
+            position: {
+              x: START_X + i * BOX_WIDTH,
+              y: START_Y + j * BOX_HEIGHT,
+            },
             width: 16,
             height: 16,
-          },
-          scale: SCALE,
-          shouldApplyGravity: false,
-          shouldApplyCollisions: true,
-          shouldMagnetize: true,
-        }),
-      )
+            imageSrc: spritesheet,
+            cropbox: {
+              x: 102,
+              y: 0,
+              width: 16,
+              height: 16,
+            },
+            scale: SCALE,
+            shouldApplyGravity: false,
+            shouldApplyCollisions: true,
+            shouldMagnetize: true,
+          }),
+        )
+      else if (i >= 32) {
+        if (j > 3 && j < 11 && i > 50 && i < 60) continue
+
+        orbs.push(
+          new Orb({
+            position: {
+              x: START_X + i * BOX_WIDTH + BOX_WIDTH / 2,
+              y: START_Y + j * BOX_HEIGHT + BOX_HEIGHT / 2,
+            },
+            radius: 7,
+          }),
+        )
+      }
     }
   }
 
@@ -979,6 +998,23 @@ function createThirdSection() {
       },
       travelDistance: 25,
       scale: 3,
+      imageSrc: spritesheet,
+    }),
+  )
+
+  soldiers.push(
+    new Soldier({
+      position: {
+        x: START_X + 2643,
+        // x: 800,
+        y: canvas.height - SOLDIER_HEIGHT - 10,
+      },
+      velocity: {
+        x: -40,
+        y: 0,
+      },
+      travelDistance: 105,
+      scale: 12,
       imageSrc: spritesheet,
     }),
   )

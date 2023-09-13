@@ -217,14 +217,15 @@ export class Blackhole {
   // Updated magnetize function
   magnetize(objects, font) {
     if (this.radius < 20) return
-    const MIN_DISTANCE = 100
+    const MIN_DISTANCE = this.radius * 1.5
     const SUCKED_IN_THRESHOLD = 5
 
     let checkpointLetterSuckedIn = false
-    let allSuckedIn = true
 
+    // First loop: Handle magnetization
     for (let object of objects) {
       if (!object.shouldMagnetize) continue
+
       const directionX =
         this.position.x - (object.position.x + object.width / 2)
       const directionY =
@@ -232,18 +233,12 @@ export class Blackhole {
       const distance = Math.sqrt(
         directionX * directionX + directionY * directionY,
       )
-      const dx = Math.min(10, 100 / distance)
+      const dx = Math.min(this.radius / 10, 100 / distance)
 
-      // Check if the black hole is larger than the object
-
-      if (this.radius <= Math.min(object.width / 2, object.height / 2)) {
-        allSuckedIn = false // The black hole is not large enough to magnetize this object
-        if (object.type === 'soldier') console.log('TOO SMALL')
-
-        continue // Skip to the next iteration of the loop
-      }
-
-      if (distance < MIN_DISTANCE) {
+      if (
+        this.radius > Math.min(object.width / 2, object.height / 2) &&
+        distance < MIN_DISTANCE
+      ) {
         object.underBlackHoleInfluence = true
         setTimeout(() => {
           object.underBlackHoleInfluence = false
@@ -252,36 +247,31 @@ export class Blackhole {
         object.position.y += (dx * directionY) / distance
 
         if (distance < this.radius) {
-          // Shrink the object if it's inside the black hole's radius
-          object.width /= 2
-          object.height /= 2
-
-          // If the object is still larger than the SUCKED_IN_THRESHOLD, it's not yet fully sucked in
-          if (
-            object.width > SUCKED_IN_THRESHOLD ||
-            object.height > SUCKED_IN_THRESHOLD
-          ) {
-            allSuckedIn = false
-          }
-        } else {
-          allSuckedIn = false
+          object.width *= 0.9 // Adjust this rate as needed.
+          object.height *= 0.9
         }
-      } else {
-        allSuckedIn = false
       }
     }
 
+    // Second loop: Check if all objects have been sucked in
+    let allSuckedIn = true
     for (let object of objects) {
       if (
+        object.width > SUCKED_IN_THRESHOLD ||
+        object.height > SUCKED_IN_THRESHOLD
+      ) {
+        allSuckedIn = false
+        break // If one object isn't sucked in, we can exit the loop early
+      }
+      if (
+        object.isCheckpoint &&
         object.width <= SUCKED_IN_THRESHOLD &&
-        object.height <= SUCKED_IN_THRESHOLD &&
-        object.isCheckpoint
+        object.height <= SUCKED_IN_THRESHOLD
       ) {
         checkpointLetterSuckedIn = true
       }
     }
 
-    // Modify the condition to call nextSequence
     if (allSuckedIn && font && !checkpointLetterSuckedIn) {
       font.nextSequence()
     }

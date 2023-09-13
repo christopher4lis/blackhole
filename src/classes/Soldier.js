@@ -56,6 +56,8 @@ export class Soldier {
     this.travelDistance = travelDistance
     this.shouldMagnetize = true
     this.type = 'soldier'
+    this.scaledDownWidth = this.width / this.scale
+    this.scaledDownHeight = this.height / this.scale
   }
 
   draw(c) {
@@ -169,13 +171,13 @@ export class Soldier {
       height: this.height,
     }
 
-    c.fillStyle = 'rgba(0,255,0,0.8)'
-    c.fillRect(
-      soldierBoundingBox.position.x,
-      soldierBoundingBox.position.y,
-      soldierBoundingBox.width,
-      soldierBoundingBox.height,
-    )
+    // c.fillStyle = 'rgba(0,255,0,0.8)'
+    // c.fillRect(
+    //   soldierBoundingBox.position.x,
+    //   soldierBoundingBox.position.y,
+    //   soldierBoundingBox.width,
+    //   soldierBoundingBox.height,
+    // )
 
     const isTouchingPlayer = boxCollision({
       box1: soldierBoundingBox,
@@ -192,7 +194,7 @@ export class Soldier {
         Math.pow(this.position.y + this.height / 2 - blackHole.position.y, 2),
     )
 
-    const underBlackHoleInfluence = distanceToBlackHole < 100 // You'll need to define this constant or determine it dynamically
+    const underBlackHoleInfluence = distanceToBlackHole < blackHole.radius * 1.5 // You'll need to define this constant or determine it dynamically
 
     if (underBlackHoleInfluence) return
 
@@ -295,6 +297,8 @@ export class Soldier {
     this.frameDelay = 12
     this.currentFrame = 0
     this.velocity.x = 0
+    this.scaledDownWidth = this.width / this.scale
+    this.scaledDownHeight = this.height / this.scale
   }
 
   checkForVerticalCollisions({ boxes }) {
@@ -347,5 +351,8 @@ export class Soldier {
     this.currentFrame = 0
     this.velocity.x =
       this.direction === 'left' ? BASE_VELOCITY * -1 : BASE_VELOCITY
+
+    this.scaledDownWidth = this.width / this.scale
+    this.scaledDownHeight = this.height / this.scale
   }
 }

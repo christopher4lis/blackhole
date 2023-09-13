@@ -10,6 +10,7 @@ export class Letter {
     height,
     delay,
     isCheckpoint,
+    shouldMagnetize = true,
   }) {
     this.char = char
     this.position = {
@@ -26,7 +27,7 @@ export class Letter {
     this.offsetY = 20 // Start slightly below its final y-position
     this.delay = delay || 0
     this.framesElapsed = 0 // Add a property to keep track of frames elapsed since the creation of the letter
-    this.shouldMagnetize = true
+    this.shouldMagnetize = shouldMagnetize
     this.isCheckpoint = isCheckpoint
   }
 
