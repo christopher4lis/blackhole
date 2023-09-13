@@ -937,7 +937,6 @@ function createThirdSection() {
     new Soldier({
       position: {
         x: START_X + 333,
-        // x: 800,
         y: canvas.height - SOLDIER_HEIGHT - 10,
       },
       velocity: {

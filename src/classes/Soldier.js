@@ -6,7 +6,6 @@ import {
   SHRINK_DISTANCE,
 } from '../globals.js'
 import { boxCollision } from '../utils.js'
-const ATTACK_OFFSET_RIGHT = 40
 const BASE_VELOCITY = 20
 
 export class Soldier {
@@ -95,7 +94,7 @@ export class Soldier {
       this.height,
     )
 
-    this.renderDebugBoxes(c)
+    // this.renderDebugBoxes(c)
 
     c.restore()
 
@@ -111,7 +110,7 @@ export class Soldier {
     c.fillStyle = 'rgba(255,0,0,0.2)'
     c.fillRect(-offsetX, -offsetY, this.width, this.height)
 
-    // blue box
+    // blue box / cropbox
     c.fillStyle = 'rgba(0,0,255,0.2)'
     c.fillRect(
       -offsetX,
@@ -160,14 +159,23 @@ export class Soldier {
 
   shouldAttackPlayer({ delta, player, c }) {
     let soldierBoundingBox = {
-      position: { ...this.position },
-      width: this.width,
+      position: {
+        x:
+          this.position.x +
+          (this.direction === 'left' ? -5 * this.scale : 5 * this.scale + 20),
+        y: this.position.y,
+      },
+      width: this.width - 20,
       height: this.height,
     }
 
-    if (this.direction === 'left') {
-      soldierBoundingBox.position.x = this.position.x - this.width / 2
-    }
+    c.fillStyle = 'rgba(0,255,0,0.8)'
+    c.fillRect(
+      soldierBoundingBox.position.x,
+      soldierBoundingBox.position.y,
+      soldierBoundingBox.width,
+      soldierBoundingBox.height,
+    )
 
     const isTouchingPlayer = boxCollision({
       box1: soldierBoundingBox,
@@ -232,20 +240,18 @@ export class Soldier {
 
   checkIfShouldDamagePlayer({ player, c }) {
     const offsetX =
-      this.direction === 'right'
-        ? ATTACK_OFFSET_RIGHT
-        : -this.width + ATTACK_OFFSET_RIGHT + 30 // Adjust offsetX for left direction
+      this.direction === 'right' ? 19 * this.scale : -19 * this.scale
 
     const attackbox = {
       position: {
         x: this.position.x + offsetX,
         y: this.position.y,
       },
-      width: SOLDIER_WIDTH,
+      width: this.width,
       height: this.height,
     }
 
-    // c.fillStyle = 'rgba(255,0,0,0.8)'
+    // c.fillStyle = 'rgba(0,255,0,0.8)'
     // c.fillRect(
     //   attackbox.position.x,
     //   attackbox.position.y,
@@ -279,10 +285,11 @@ export class Soldier {
       width: 38,
       height: SOLDIER_HEIGHT,
       offset: {
-        x: this.direction === 'left' ? 50 : 0, // You might need to adjust this
+        x: this.direction === 'left' ? 19 * this.scale : 0, // You might need to adjust this
         y: -5,
       },
     }
+
     this.frames = 0
     this.maxFrames = 5
     this.frameDelay = 12
