@@ -540,6 +540,7 @@ const game = {
               font.nextSequence()
               pointer.fadeIn = true
               this.allowPlayerInput = true
+              this.allowPlayerKeysInput = true
             }, SEQUENCE_DELAY_4)
           }, SEQUENCE_DELAY_3)
         }, SEQUENCE_DELAY_2)
