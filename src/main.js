@@ -28,6 +28,7 @@ const DEBUG = false
 const SHOW_INTRO = true
 
 const FADE_SPEED = 0.003
+const FADE_IN_SPEED = 0.006
 const GROUND_FRICTION = 0.98
 const GROUND_TILE_COUNT = 193
 const MAP_TILES_PER_ROW = 64
@@ -49,7 +50,6 @@ const DUST_COLOR = '#6abe30'
 c.imageSmoothingEnabled = false
 
 const groundSprites = []
-
 for (let i = 0; i < GROUND_TILE_COUNT; i++) {
   groundSprites.push(
     new Sprite({
@@ -347,7 +347,7 @@ class Player {
     )
     c.rotate(ANGLE_FROM_BLACKHOLE + Math.PI / 2)
     c.translate(-WAND_WIDTH / 2, -WAND_HEIGHT)
-    c.drawImage(this.image, 63, 4, 7, 19, 0, 0, WAND_WIDTH, WAND_HEIGHT)
+    c.drawImage(this.image, 171, 0, 7, 19, 0, 0, WAND_WIDTH, WAND_HEIGHT)
     c.restore()
     c.globalAlpha = 1
   }
@@ -369,7 +369,6 @@ class Player {
     this.invincible = true
 
     setTimeout(() => {
-      console.log('invincible lostt')
       this.invincible = false
     }, 2000)
 
@@ -382,6 +381,14 @@ class Player {
 
         break
       }
+    }
+
+    if (
+      this.hearts.every((heart) => heart.state === 'empty') &&
+      !game.fadeToBlack
+    ) {
+      game.fadeToBlack = true
+      fadeAlpha = 0
     }
   }
 }
@@ -458,7 +465,7 @@ function createOrbGrid({ position, rows = 5, cols = 5 }) {
   }
 }
 
-// c.scale(0.1, 0.2)
+// c.scale(0.1, 0.1)
 createOrbGrid({
   position: {
     x: 1420,
@@ -489,6 +496,22 @@ const game = {
   allowPlayerInput: false,
   allowPlayerKeysInput: false,
   startFadeFromBlack: false,
+  fadeToBlack: false,
+  init() {
+    createOrbGrid({
+      position: {
+        x: 1420,
+        y: 100,
+      },
+    })
+
+    createOrbGrid({
+      position: {
+        x: 3100,
+        y: 380,
+      },
+    })
+  },
   fadeFromBlack() {
     if (fadeAlpha > 0 && fadeAlpha <= 1) {
       // Draw the black overlay with the current alpha
@@ -506,7 +529,7 @@ const game = {
         setTimeout(() => {
           // with you lies the power of omni
           font.nextSequence()
-          blackHole.grow(20)
+          blackHole.grow(23)
 
           setTimeout(() => {
             // draw your wand and use its power wisely
@@ -740,8 +763,8 @@ for (let i = 0; i < 10; i++) {
       height: 5,
       imageSrc: spritesheet,
       cropbox: {
-        x: 134,
-        y: 14,
+        x: 152,
+        y: 1,
         width: 18,
         height: 5,
       },
@@ -1139,7 +1162,7 @@ function animate() {
     c.fill()
   }
 
-  if (!DEBUG) game.fadeFromBlack()
+  if (!DEBUG && !game.fadeToBlack) game.fadeFromBlack()
 
   for (let letter of font.letters) {
     letter.animate()
@@ -1147,6 +1170,29 @@ function animate() {
   }
 
   font.updateScrollPosition(player.position.x)
+
+  if (fadeAlpha >= 0 && fadeAlpha <= 1 && game.fadeToBlack) {
+    // Draw the black overlay with the current alpha
+    c.globalAlpha = fadeAlpha
+    c.fillStyle = 'black'
+    c.fillRect(0, 0, canvas.width + scroll.value, canvas.height)
+
+    if (fadeAlpha < 1) fadeAlpha += FADE_IN_SPEED
+    if (fadeAlpha > 1) fadeAlpha = 1
+
+    c.fillStyle = 'white'
+    c.fillText(
+      'GAME OVER',
+      scroll.value + canvas.width / 2 - 30,
+      canvas.height / 2,
+    )
+
+    c.fillText(
+      'REFRESH TO PLAY AGAIN',
+      scroll.value + canvas.width / 2 - 65,
+      canvas.height / 2 + 20,
+    )
+  }
 }
 
 animate()
